@@ -51,12 +51,14 @@ export async function seedFoods() {
   });
 }
 
+const SETTING_KEYS = ["targets", "profile", "weights", "adapt"];
+
 // ---- backup. browsers can wipe site data, so keep a copy somewhere safe ----
 const blobToData = b => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });
 
 export async function exportAll() {
   const [foods, meals, settings] = [await all("foods"), await all("meals"), {}];
-  for (const k of ["targets"]) settings[k] = await get("settings", k);
+  for (const k of SETTING_KEYS) settings[k] = await get("settings", k);
   const out = [];
   for (const m of meals) out.push({ ...m, photo: m.photo ? await blobToData(m.photo) : null });
   return JSON.stringify({ app: "macro-tracker", version: 1, foods, meals: out, settings });
@@ -71,5 +73,5 @@ export async function importAll(text) {
     const photo = m.photo ? await (await fetch(m.photo)).blob() : null;
     await put("meals", { ...m, photo });
   }
-  if (d.settings && d.settings.targets) await setSetting("targets", d.settings.targets);
+  for (const k of SETTING_KEYS) if (d.settings && d.settings[k] !== undefined && d.settings[k] !== null) await setSetting(k, d.settings[k]);
 }

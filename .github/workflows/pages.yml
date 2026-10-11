@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: tests
-        run: node --test tests/learner.test.mjs
+        run: node --test tests/*.test.mjs
       - name: collect site files
         run: |
           mkdir site

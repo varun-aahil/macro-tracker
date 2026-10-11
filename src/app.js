@@ -1,28 +1,14 @@
 import * as store from "./store.js";
+import { $, esc, today, isoOf, parseISO, shiftDay, niceDate, ICON, toast } from "./ui.js";
+import { renderOnboarding } from "./onboarding.js";
+import { renderMe, getCheckin, planInput, latestWeight } from "./me.js";
+import { ageFrom } from "./plan.js";
 import * as embed from "./embed.js";
 import { rank, pickDraft, buildExamples, typicalGrams, evaluate, foodGate, GATE_FOOD, GATE_OTHER } from "./learner.js";
 import { MEAL_TYPES, DEFAULT_TARGETS, macrosFor, sumMacros, validateFood, num, buildItems,
   applyActual, dayTotals, nextSplit, stats } from "./logic.js";
 
-const $ = (s, el = document) => el.querySelector(s);
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
-
 if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) document.documentElement.classList.add("native");
-
-const isoOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const parseISO = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
-const shiftDay = (iso, n) => { const d = parseISO(iso); d.setDate(d.getDate() + n); return isoOf(d); };
-const niceDate = iso => iso === today() ? "Today" : iso === shiftDay(today(), -1) ? "Yesterday"
-  : parseISO(iso).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
-const ICON = {
-  today: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3.5"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
-  add: '<svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg>',
-  foods: '<svg viewBox="0 0 24 24"><path d="M7 3v7M10.5 3v7M7 10c0 1.7 1.5 2.5 1.75 2.5S10.5 11.7 10.5 10M8.75 12.5V21M17 21V3c-2.2 1.2-3.5 3.8-3.5 7.5H17"/></svg>',
-  me: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.8-3.6 3.8-5.5 7.5-5.5s6.7 1.9 7.5 5.5"/></svg>',
-  left: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
-  right: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
-};
 
 const MEAL_LABELS = { breakfast: "Breakfast", lunch: "Lunch", snack: "Snacks", dinner: "Dinner" };
 const guessMeal = () => { const h = new Date().getHours(); return h < 11 ? "breakfast" : h < 16 ? "lunch" : h < 19 ? "snack" : "dinner"; };
@@ -30,35 +16,61 @@ let mealPick = null;
 
 let tab = "today", date = today(), draft = null;
 let foods = [], meals = [], targets = DEFAULT_TARGETS;
+let profile = null, weights = [], adapt = null, editing = false, pending = null;
 
 async function reload() {
   foods = (await store.all("foods")).filter(f => !f.archived).sort((a, b) => a.name.localeCompare(b.name));
   meals = (await store.all("meals")).sort((a, b) => a.created_at.localeCompare(b.created_at));
   targets = await store.getSetting("targets", DEFAULT_TARGETS);
+  profile = await store.getSetting("profile", null);
+  weights = await store.getSetting("weights", []);
+  adapt = await store.getSetting("adapt", null);
+  const c = profile ? getCheckin({ profile, targets, meals, weights, adapt, todayISO: today() }) : null;
+  pending = c && c.state === "suggest" ? c : null;
 }
 const foodMap = () => Object.fromEntries(foods.map(f => [f.id, f]));
-
-function toast(msg) {
-  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
-  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
-}
 
 function renderNav() {
   const tabs = [["today", "Today"], ["add", "Add"], ["foods", "Foods"], ["me", "Me"]];
   $("#nav").innerHTML = tabs.map(([k, l]) =>
-    `<button class="${tab === k ? "on" : ""}${k === "add" ? " plus" : ""}" data-t="${k}"><span class="ic">${ICON[k]}</span><span>${l}</span></button>`).join("");
+    `<button class="${tab === k ? "on" : ""}${k === "add" ? " plus" : ""}" data-t="${k}"><span class="ic">${ICON[k]}${k === "me" && pending ? '<i class="dot"></i>' : ""}</span><span>${l}</span></button>`).join("");
   $("#nav").querySelectorAll("button").forEach(b => b.onclick = () => { tab = b.dataset.t; draft = null; mealPick = null; show(); });
 }
 
+async function finishOnboarding({ profile: p, weightKg, targets: t }) {
+  const old = profile;
+  await store.setSetting("profile", { ...p, startWeightKg: old && old.startWeightKg ? old.startWeightKg : weightKg });
+  await store.setSetting("targets", t);
+  const now = today(), last = weights.length ? weights[weights.length - 1].kg : null;
+  if (last === null || last !== weightKg) {
+    await store.setSetting("weights", weights.filter(w => w.date !== now).concat({ date: now, kg: weightKg }).sort((x, y) => x.date.localeCompare(y.date)));
+  }
+  editing = false; tab = old ? "me" : "today"; show();
+}
+
 async function show() {
-  renderNav();
   const app = $("#app");
   try {
     await reload();
+    renderNav();
+    const gate = !profile || editing;
+    document.body.classList.toggle("onboarding", gate);
+    if (gate) {
+      const existing = profile ? { profile, age: ageFrom(profile.birthYear), weightKg: latestWeight(weights, 70), targets } : null;
+      renderOnboarding(app, {
+        existing, onFinish: finishOnboarding,
+        onCancel: () => { editing = false; show(); },
+        onRestore: async file => {
+          try { await store.importAll(await file.text()); show(); } catch (err) { toast(err.message || "That backup didn't work"); }
+        },
+      });
+      window.scrollTo(0, 0);
+      return;
+    }
     if (tab === "today") viewToday(app);
     else if (tab === "add") draft ? viewReview(app) : viewAdd(app);
     else if (tab === "foods") viewFoods(app);
-    else viewMe(app);
+    else renderMe(app, { profile, weights, targets, meals, foods, adapt, refresh: show, editProfile: () => { editing = true; show(); } });
   } catch (e) { app.innerHTML = `<div class="card warn">${esc(e.message)}</div>`; }
 }
 
@@ -68,12 +80,16 @@ function barRow(label, val, target, color) {
   return `<div><div class="row spread"><span class="muted">${label}</span><span><b>${Math.round(val)}</b><span class="muted"> / ${target}g</span></span></div>
     <div class="bar"><i style="width:${pct}%;background:${color}"></i></div></div>`;
 }
+const greeting = () => { const h = new Date().getHours(); return h < 5 ? "Hello" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; };
+
 function viewToday(app) {
   const day = meals.filter(m => m.log_date === date);
   const t = dayTotals(day), left = Math.round(targets.kcal - t.kcal);
   const urls = [];
   app.innerHTML = `
+    <div class="muted greet">${esc(greeting())}, ${esc(profile.name)}</div>
     <h1>Macro Tracker</h1>
+    ${pending ? `<button class="banner" id="gocheck"><b>Your weekly check-in is ready</b><span>Suggested target: ${pending.kcal} kcal</span></button>` : ""}
     <div class="datebar">
       <button class="icb" id="dprev" aria-label="Previous day">${ICON.left}</button>
       <button class="datechip" id="dopen">${ICON.today}<span>${esc(niceDate(date))}</span></button>
@@ -106,6 +122,7 @@ function viewToday(app) {
       </section>`;
     }).join("")}`;
   app.querySelectorAll("[data-addto]").forEach(b => b.onclick = () => { mealPick = b.dataset.addto; tab = "add"; draft = null; show(); });
+  const gc = $("#gocheck"); if (gc) gc.onclick = () => { tab = "me"; show(); };
   $("#dprev").onclick = () => { date = shiftDay(date, -1); show(); };
   $("#dnext").onclick = () => { date = shiftDay(date, 1); show(); };
   $("#dopen").onclick = openCalendar;
@@ -193,9 +210,7 @@ async function buildDraft(blob, emb) {
 }
 
 function viewAdd(app) {
-  mealPick ||= guessMeal();
   app.innerHTML = `<h1>Add a meal</h1>
-    <div class="seg" id="seg">${MEAL_TYPES.map(t => `<button class="${t === mealPick ? "on" : ""}" data-m="${t}">${MEAL_LABELS[t]}</button>`).join("")}</div>
     <p class="muted">Photo from above, whole plate in frame, good light.</p>
     <label class="cam">Take a photo
       <input type="file" accept="image/*" capture="environment" id="file"></label>
@@ -203,10 +218,6 @@ function viewAdd(app) {
       <input type="file" accept="image/*" id="gal"></label>
     <button class="ghost" id="manual" style="width:100%;margin-top:14px">Log without a photo</button>
     <div id="busy"></div>`;
-  $("#seg").querySelectorAll("button").forEach(btn => btn.onclick = () => {
-    mealPick = btn.dataset.m;
-    $("#seg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === btn));
-  });
   $("#manual").onclick = () => { draft = { blob: null, emb: null, items: [], more: [], pred_kcal: null, pred_count: 0 }; show(); };
   const handle = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -347,6 +358,38 @@ function foodForm(el, food, done) {
   };
 }
 
+/* ---------- food info ---------- */
+function openFoodInfo(food, { onEdit, onDelete }) {
+  const uses = meals.filter(m => m.items.some(i => i.food_id === food.id));
+  const typical = typicalGrams(food, meals);
+  const at = g => { const x = macrosFor(food, g); return `${Math.round(x.kcal)} kcal · P ${Math.round(x.protein)} · C ${Math.round(x.carbs)} · F ${Math.round(x.fat)}`; };
+  const e = { p: food.protein * 4, c: food.carbs * 4, f: food.fat * 9 }, total = e.p + e.c + e.f;
+  const share = k => total ? Math.round(e[k] / total * 100) : 0;
+  const last = uses.length ? uses[uses.length - 1].log_date : null;
+  const sheet = document.createElement("div"); sheet.className = "sheet";
+  sheet.innerHTML = `<div>
+    <div class="row spread"><b class="calt" style="min-width:0">${esc(food.name)}</b><button class="ghost small" id="fi-x">Close</button></div>
+    <div class="big" style="margin-top:10px">${food.kcal}<span class="muted" style="font-size:16px"> kcal per 100 g</span></div>
+    ${total ? `<div class="split"><i style="width:${share("p")}%;background:var(--leaf)"></i><i style="width:${share("c")}%;background:var(--wheat)"></i><i style="width:${share("f")}%;background:var(--sky)"></i></div>
+    <div class="legend"><span><u style="background:var(--leaf)"></u>Protein ${food.protein} g · ${share("p")}%</span>
+      <span><u style="background:var(--wheat)"></u>Carbs ${food.carbs} g · ${share("c")}%</span>
+      <span><u style="background:var(--sky)"></u>Fat ${food.fat} g · ${share("f")}%</span></div>
+    <p class="note">Percentages are the share of the calories that come from each macro.</p>` : ""}
+    <div class="irows">
+      ${food.unit_name ? `<div><span class="muted">1 ${esc(food.unit_name)} (${food.unit_grams} g)</span><b>${at(food.unit_grams)}</b></div>` : ""}
+      <div><span class="muted">${uses.length ? "Your usual portion" : "Starting portion"} (${typical} g)</span><b>${at(typical)}</b></div>
+      <div><span class="muted">Logged</span><b>${uses.length ? `${uses.length} time${uses.length === 1 ? "" : "s"}, last ${esc(niceDate(last))}` : "Not yet"}</b></div>
+    </div>
+    <p class="note">${food.source === "seed" ? "A starting value from a general table, so check it against your packet or IFCT and edit it if it's off." : "You added this food."}</p>
+    <div class="row" style="margin-top:10px"><button id="fi-e" class="ghost" style="flex:1">Edit</button><button id="fi-d" class="ghost danger" style="flex:1">Delete</button></div></div>`;
+  document.body.appendChild(sheet);
+  const close = () => sheet.remove();
+  sheet.onclick = ev => { if (ev.target === sheet) close(); };
+  $("#fi-x", sheet).onclick = close;
+  $("#fi-e", sheet).onclick = () => { close(); onEdit(food); };
+  $("#fi-d", sheet).onclick = async () => { if (await onDelete(food.id)) close(); };
+}
+
 /* ---------- foods ---------- */
 function viewFoods(app) {
   app.innerHTML = `<div class="row spread"><h1>Foods</h1><button class="small" id="nf">+ New</button></div>
@@ -354,14 +397,20 @@ function viewFoods(app) {
   const load = () => {
     const q = $("#q").value.trim().toLowerCase();
     const list = foods.filter(f => f.name.toLowerCase().includes(q));
-    $("#list").innerHTML = list.map(f => `<div class="card"><div class="row spread"><b>${esc(f.name)}</b>
+    $("#list").innerHTML = list.map(f => `<div class="card tap" data-info="${f.id}"><div class="row spread"><b>${esc(f.name)}</b>
       <span><button class="small ghost" data-e="${f.id}">Edit</button> <button class="danger" data-a="${f.id}">Delete</button></span></div>
       <div class="muted">${f.kcal} kcal · P ${f.protein} · C ${f.carbs} · F ${f.fat} per 100g${f.unit_name ? ` · 1 ${esc(f.unit_name)} = ${f.unit_grams}g` : ""}</div></div>`).join("");
-    app.querySelectorAll("[data-e]").forEach(b => b.onclick = () => foodForm($("#form"), foods.find(f => f.id === +b.dataset.e), async () => { await reload(); $("#form").innerHTML = ""; load(); }));
-    app.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
-      if (!confirm("Delete this food? Meals you already logged keep it.")) return;
-      await store.del("foods", +b.dataset.a); await reload(); load();
+    const edit = f => { foodForm($("#form"), f, async () => { await reload(); $("#form").innerHTML = ""; load(); }); window.scrollTo({ top: 0, behavior: "smooth" }); };
+    const remove = async id => {
+      if (!confirm("Delete this food? Meals you already logged keep it.")) return false;
+      await store.del("foods", id); await reload(); load(); return true;
+    };
+    app.querySelectorAll("[data-info]").forEach(c => c.onclick = e => {
+      if (e.target.closest("button")) return;
+      openFoodInfo(foods.find(f => f.id === +c.dataset.info), { onEdit: edit, onDelete: remove });
     });
+    app.querySelectorAll("[data-e]").forEach(b => b.onclick = () => edit(foods.find(f => f.id === +b.dataset.e)));
+    app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => remove(+b.dataset.a));
   };
   $("#q").oninput = load;
   $("#nf").onclick = () => foodForm($("#form"), null, async () => { await reload(); $("#form").innerHTML = ""; load(); });
@@ -369,44 +418,5 @@ function viewFoods(app) {
 }
 
 /* ---------- me ---------- */
-function viewMe(app) {
-  const s = stats(meals), ev = evaluate(meals, foods);
-  const pct = x => Math.round(x * 100) + "%";
-  app.innerHTML = `<h1>Me</h1><h2>Daily targets</h2><div class="card">
-    <div class="row"><div><label>kcal</label><input id="tk" type="number" value="${targets.kcal}"></div><div><label>Protein</label><input id="tp" type="number" value="${targets.protein}"></div></div>
-    <div class="row"><div><label>Carbs</label><input id="tc" type="number" value="${targets.carbs}"></div><div><label>Fat</label><input id="tf" type="number" value="${targets.fat}"></div></div>
-    <button id="ts" style="width:100%;margin-top:12px">Save targets</button></div>
-    <h2>How wrong is the first guess?</h2><div class="card">
-    ${!s.photoMeals ? '<p class="muted">Log a few photo meals and this fills in.</p>' : `
-      <p class="muted">${s.photoMeals} photo meals</p>
-      <p>Of foods it listed, you kept <b>${pct(s.precision)}</b>. Of foods you ate, it listed <b>${pct(s.recall)}</b>.</p>
-      ${s.kcal ? `<p>Calories off by <b>${s.kcal.mae} kcal</b> on average (${s.kcal.mape}%). ${s.kcal.bias < 0 ? "Underestimates" : "Overestimates"} by ${Math.abs(s.kcal.bias)} kcal per meal.</p>` : ""}`}</div>
-    <h2>Is it learning?</h2><div class="card">
-    ${ev ? `<p class="muted">Tested on ${ev.holdout} meals it never learned from, using ${ev.train} to learn.</p>
-      <p>Right food in its top 3: <b>${pct(ev.zeroShot.top3)}</b> at the start, <b>${pct(ev.adaptive.top3)}</b> now.</p>
-      <p>Top pick correct: <b>${pct(ev.zeroShot.top1)}</b> at the start, <b>${pct(ev.adaptive.top1)}</b> now.</p>`
-      : '<p class="muted">Every 5th photo meal is set aside as a test. Log about 10 photo meals to see this.</p>'}</div>
-    <h2>Your data</h2><div class="card">
-    <p class="muted">Everything stays on this device. Browsers can clear site data, so save a backup now and then.</p>
-    <div class="row"><button id="ex" class="ghost" style="flex:1">Save backup</button><button id="im" class="ghost" style="flex:1">Restore</button></div>
-    <input type="file" id="imf" accept="application/json" style="display:none"></div>`;
-  $("#ts").onclick = async () => {
-    const t = { kcal: num($("#tk").value), protein: num($("#tp").value), carbs: num($("#tc").value), fat: num($("#tf").value) };
-    if (Object.values(t).some(v => v === null || v <= 0)) { toast("Enter all four targets"); return; }
-    await store.setSetting("targets", t); toast("Saved");
-  };
-  $("#ex").onclick = async () => {
-    const blob = new Blob([await store.exportAll()], { type: "application/json" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-    a.download = `macro-tracker-backup-${today()}.json`; a.click();
-  };
-  $("#im").onclick = () => $("#imf").click();
-  $("#imf").onchange = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    if (!confirm("This replaces everything on this device with the backup. Continue?")) return;
-    try { await store.importAll(await f.text()); toast("Restored"); show(); } catch (err) { toast(err.message); }
-  };
-}
-
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
 store.seedFoods().then(show);
