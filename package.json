@@ -1,0 +1,21 @@
+{
+  "name": "plate",
+  "version": "1.0.0",
+  "description": "on-device photo macro tracker",
+  "main": "electron/main.js",
+  "scripts": {
+    "test": "node --test tests/learner.test.mjs",
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.plate.macros",
+    "productName": "Plate",
+    "files": ["electron/**", "index.html", "manifest.json", "sw.js", "foods.json", "icon-*.png", "src/**"],
+    "win": { "target": "portable", "artifactName": "Plate-portable.exe" }
+  }
+}
