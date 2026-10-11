@@ -1,0 +1,42 @@
+# builds an installable android apk (debug-signed, fine for sideloading) and attaches it to a release
+name: android
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: web files
+        run: |
+          mkdir www
+          cp -r index.html manifest.json sw.js foods.json icon-192.png icon-512.png src www/
+      - name: capacitor project
+        run: |
+          npm init -y
+          npm i @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init Plate com.plate.macros --web-dir www
+          npx cap add android
+          npx cap sync android
+      - name: build apk
+        run: cd android && ./gradlew assembleDebug
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk Plate.apk
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: Plate.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Plate-apk
+          path: Plate.apk

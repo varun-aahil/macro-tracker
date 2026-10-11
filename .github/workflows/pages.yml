@@ -1,0 +1,28 @@
+# publishes the web app to github pages. open the page on android chrome > menu > install app
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - name: tests
+        run: node --test tests/learner.test.mjs
+      - name: collect site files
+        run: |
+          mkdir site
+          cp -r index.html manifest.json sw.js foods.json icon-192.png icon-512.png src site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - uses: actions/deploy-pages@v4

@@ -1,0 +1,26 @@
+# builds a portable windows .exe with electron and attaches it to a release
+name: windows
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run dist
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: dist/Plate-portable.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Plate-exe
+          path: dist/Plate-portable.exe
