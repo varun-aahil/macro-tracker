@@ -8,6 +8,12 @@ const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 
+if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) document.documentElement.classList.add("native");
+
+const MEAL_LABELS = { breakfast: "Breakfast", lunch: "Lunch", snack: "Snacks", dinner: "Dinner" };
+const guessMeal = () => { const h = new Date().getHours(); return h < 11 ? "breakfast" : h < 16 ? "lunch" : h < 19 ? "snack" : "dinner"; };
+let mealPick = null;
+
 let tab = "today", date = today(), draft = null;
 let foods = [], meals = [], targets = DEFAULT_TARGETS;
 
@@ -26,7 +32,7 @@ function toast(msg) {
 function renderNav() {
   const tabs = [["today", "Today"], ["add", "Add"], ["foods", "Foods"], ["me", "Me"]];
   $("#nav").innerHTML = tabs.map(([k, l]) => `<button class="${tab === k ? "on" : ""}" data-t="${k}">${l}</button>`).join("");
-  $("#nav").querySelectorAll("button").forEach(b => b.onclick = () => { tab = b.dataset.t; draft = null; show(); });
+  $("#nav").querySelectorAll("button").forEach(b => b.onclick = () => { tab = b.dataset.t; draft = null; mealPick = null; show(); });
 }
 
 async function show() {
@@ -62,13 +68,24 @@ function viewToday(app) {
         ${barRow("Carbs", t.carbs, targets.carbs, "var(--wheat)")}
         ${barRow("Fat", t.fat, targets.fat, "var(--sky)")}
       </div></div>
-    ${day.length ? "" : '<p class="muted">Nothing logged yet. Tap Add and take a photo.</p>'}
-    ${day.map(m => { const u = m.photo ? URL.createObjectURL(m.photo) : null; if (u) urls.push(u); return `<div class="card meal">
-      ${u ? `<img src="${u}" alt="">` : ""}
-      <div class="row spread"><b style="text-transform:capitalize">${esc(m.meal_type || "meal")}</b><span>${Math.round(m.totals.kcal)} kcal</span></div>
-      <div class="muted">${m.items.map(i => esc(i.food_name) + " " + Math.round(i.grams) + "g").join(" · ")}</div>
-      <div class="muted">P ${Math.round(m.totals.protein)} · C ${Math.round(m.totals.carbs)} · F ${Math.round(m.totals.fat)}${m.actual ? " · numbers you entered" : ""}</div>
-      <button class="danger" data-del="${m.id}">Delete</button></div>`; }).join("")}`;
+    ${MEAL_TYPES.map(type => {
+      const ms = day.filter(m => (MEAL_TYPES.includes(m.meal_type) ? m.meal_type : "snack") === type);
+      const st = dayTotals(ms);
+      return `<section class="sec">
+        <div class="sechead"><div><b>${MEAL_LABELS[type]}</b>
+          <div class="muted">${ms.length ? `${Math.round(st.kcal)} kcal · P ${Math.round(st.protein)} · C ${Math.round(st.carbs)} · F ${Math.round(st.fat)}` : "Nothing yet"}</div></div>
+          <button class="small ghost" data-addto="${type}">+ Add</button></div>
+        ${ms.map(m => { const u = m.photo ? URL.createObjectURL(m.photo) : null; if (u) urls.push(u);
+          const time = new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+          return `<div class="card meal">
+          ${u ? `<img src="${u}" alt="">` : ""}
+          <div class="row spread"><span class="muted">${esc(time)}</span><b>${Math.round(m.totals.kcal)} kcal</b></div>
+          <div>${m.items.map(i => esc(i.food_name) + " " + Math.round(i.grams) + "g").join(" · ")}</div>
+          <div class="muted">P ${Math.round(m.totals.protein)} · C ${Math.round(m.totals.carbs)} · F ${Math.round(m.totals.fat)}${m.actual ? " · numbers you entered" : ""}</div>
+          <button class="danger" data-del="${m.id}">Delete</button></div>`; }).join("")}
+      </section>`;
+    }).join("")}`;
+  app.querySelectorAll("[data-addto]").forEach(b => b.onclick = () => { mealPick = b.dataset.addto; tab = "add"; draft = null; show(); });
   $("#dt").onchange = e => { date = e.target.value || today(); show(); };
   app.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (!confirm("Delete this meal?")) return;
@@ -98,13 +115,22 @@ async function ensureTextEmbeddings(onStep) {
 }
 
 function viewAdd(app) {
-  app.innerHTML = `<h1>Add a meal</h1><p class="muted">Photo from above, whole plate in frame, good light.</p>
-    <label class="cam">Take or choose a photo
+  mealPick ||= guessMeal();
+  app.innerHTML = `<h1>Add a meal</h1>
+    <div class="seg" id="seg">${MEAL_TYPES.map(t => `<button class="${t === mealPick ? "on" : ""}" data-m="${t}">${MEAL_LABELS[t]}</button>`).join("")}</div>
+    <p class="muted">Photo from above, whole plate in frame, good light.</p>
+    <label class="cam">Take a photo
       <input type="file" accept="image/*" capture="environment" id="file"></label>
+    <label class="cam alt">Choose from gallery
+      <input type="file" accept="image/*" id="gal"></label>
     <button class="ghost" id="manual" style="width:100%;margin-top:14px">Log without a photo</button>
     <div id="busy"></div>`;
+  $("#seg").querySelectorAll("button").forEach(btn => btn.onclick = () => {
+    mealPick = btn.dataset.m;
+    $("#seg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === btn));
+  });
   $("#manual").onclick = () => { draft = { blob: null, emb: null, items: [], more: [], pred_kcal: null, pred_count: 0 }; show(); };
-  $("#file").onchange = async e => {
+  const handle = async e => {
     const f = e.target.files[0]; if (!f) return;
     const busy = $("#busy");
     const say = html => busy.innerHTML = html;
@@ -134,6 +160,8 @@ function viewAdd(app) {
       say(`<p class="warn">${esc(err.message || err)}. If this is the first run, check your internet connection and try again.</p>`);
     }
   };
+  $("#file").onchange = handle;
+  $("#gal").onchange = handle;
 }
 
 /* ---------- review ---------- */
@@ -144,8 +172,7 @@ function liveTotals() {
 function viewReview(app) {
   const d = draft, fm = foodMap(), t = liveTotals();
   const url = d.blob ? URL.createObjectURL(d.blob) : null;
-  const hour = new Date().getHours();
-  const guess = hour < 11 ? "breakfast" : hour < 16 ? "lunch" : hour < 19 ? "snack" : "dinner";
+  const guess = mealPick || guessMeal();
   app.innerHTML = `<h1>Check this</h1>
     ${url ? `<img class="photo" src="${url}" alt="">` : ""}
     ${d.blob ? '<p class="muted">This is a guess from the photo. Fix it below. Every correction teaches the app your food and your portions.</p>' : ""}
@@ -159,7 +186,7 @@ function viewReview(app) {
     ${d.more.length ? `<div class="muted">Other guesses:</div>${d.more.map((s, n) => `<span class="chip" data-more="${n}">+ ${esc(fm[s.food_id]?.name || "")}</span>`).join("")}` : ""}
     <div class="card"><div class="row spread"><b id="tk">${Math.round(t.kcal)} kcal</b>
       <span class="muted" id="tm">P ${Math.round(t.protein)} · C ${Math.round(t.carbs)} · F ${Math.round(t.fat)}</span></div>
-      <label>Meal</label><select id="mt">${MEAL_TYPES.map(m => `<option ${m === guess ? "selected" : ""}>${m}</option>`).join("")}</select></div>
+      <label>Meal</label><select id="mt">${MEAL_TYPES.map(m => `<option value="${m}" ${m === guess ? "selected" : ""}>${MEAL_LABELS[m]}</option>`).join("")}</select></div>
     <div class="card"><b>Know the real numbers?</b>
       <div class="note">From a label, a weighed plate or a restaurant menu. Enter what you know. Calories rescale your portions, protein, carbs and fat replace the estimate. This is what trains it.</div>
       <div class="row"><div><label>kcal</label><input id="ak" type="number" inputmode="decimal"></div><div><label>Protein</label><input id="ap" type="number" inputmode="decimal"></div></div>
@@ -191,7 +218,7 @@ function viewReview(app) {
         pred_kcal: d.pred_kcal, pred_count: d.pred_count, items, totals, actual,
         engine: d.emb ? "clip" : "manual",
       });
-      draft = null; tab = "today"; toast("Saved"); show();
+      draft = null; mealPick = null; tab = "today"; toast("Saved"); show();
     } catch (e) { toast(e.message); $("#save").disabled = false; }
   };
 }

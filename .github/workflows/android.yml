@@ -28,6 +28,8 @@ jobs:
           npm i @capacitor/core @capacitor/cli @capacitor/android
           npx cap init "Macro Tracker" com.varunaahil.macrotracker --web-dir www
           npx cap add android
+          npm i -D @capacitor/assets
+          npx capacitor-assets generate --android
           npx cap sync android
       - name: build apk
         run: cd android && ./gradlew assembleDebug

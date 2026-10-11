@@ -13,7 +13,7 @@ app.whenReady().then(() => {
     if (!file.startsWith(root)) return new Response("not found", { status: 404 });
     return net.fetch(pathToFileURL(file).toString());
   });
-  const win = new BrowserWindow({ width: 440, height: 860, autoHideMenuBar: true });
+  const win = new BrowserWindow({ width: 440, height: 860, autoHideMenuBar: true, icon: path.join(root, "build", "icon.png") });
   win.loadURL("app://macro-tracker/");
 });
 app.on("window-all-closed", () => app.quit());

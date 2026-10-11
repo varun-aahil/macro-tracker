@@ -15,7 +15,7 @@
   "build": {
     "appId": "com.varunaahil.macrotracker",
     "productName": "Macro Tracker",
-    "files": ["electron/**", "index.html", "manifest.json", "sw.js", "foods.json", "icon-*.png", "src/**"],
-    "win": { "target": "portable", "artifactName": "macro-tracker.exe" }
+    "files": ["electron/**", "build/**", "index.html", "manifest.json", "sw.js", "foods.json", "icon-*.png", "src/**"],
+    "win": { "target": "portable", "artifactName": "macro-tracker.exe", "icon": "build/icon.png" }
   }
 }
