@@ -1,5 +1,5 @@
 {
-  "name": "plate",
+  "name": "macro-tracker",
   "version": "1.0.0",
   "description": "on-device photo macro tracker",
   "main": "electron/main.js",
@@ -13,9 +13,9 @@
     "electron-builder": "^25.0.0"
   },
   "build": {
-    "appId": "com.plate.macros",
-    "productName": "Plate",
+    "appId": "com.varunaahil.macrotracker",
+    "productName": "Macro Tracker",
     "files": ["electron/**", "index.html", "manifest.json", "sw.js", "foods.json", "icon-*.png", "src/**"],
-    "win": { "target": "portable", "artifactName": "Plate-portable.exe" }
+    "win": { "target": "portable", "artifactName": "macro-tracker.exe" }
   }
 }

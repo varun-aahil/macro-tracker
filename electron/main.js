@@ -2,7 +2,7 @@ const { app, BrowserWindow, protocol, net } = require("electron");
 const path = require("path");
 const { pathToFileURL } = require("url");
 
-// serve the app from a real origin (app://plate) so indexeddb, service workers and module imports behave
+// serve the app from a real origin (app://macro-tracker) so indexeddb, service workers and module imports behave
 protocol.registerSchemesAsPrivileged([{ scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true, allowServiceWorkers: true } }]);
 
 app.whenReady().then(() => {
@@ -14,6 +14,6 @@ app.whenReady().then(() => {
     return net.fetch(pathToFileURL(file).toString());
   });
   const win = new BrowserWindow({ width: 440, height: 860, autoHideMenuBar: true });
-  win.loadURL("app://plate/");
+  win.loadURL("app://macro-tracker/");
 });
 app.on("window-all-closed", () => app.quit());

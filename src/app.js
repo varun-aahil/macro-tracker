@@ -52,7 +52,7 @@ function viewToday(app) {
   const t = dayTotals(day), left = Math.round(targets.kcal - t.kcal);
   const urls = [];
   app.innerHTML = `
-    <div class="row spread"><h1>Plate</h1><input type="date" id="dt" value="${date}" style="width:auto"></div>
+    <div class="row spread"><h1>Macro Tracker</h1><input type="date" id="dt" value="${date}" style="width:auto"></div>
     <div class="card">
       <div class="big">${Math.round(t.kcal)}<span class="muted" style="font-size:16px"> kcal</span></div>
       <div class="muted">${left >= 0 ? left + " left of " + targets.kcal : (-left) + " over " + targets.kcal}</div>
@@ -294,7 +294,7 @@ function viewMe(app) {
   $("#ex").onclick = async () => {
     const blob = new Blob([await store.exportAll()], { type: "application/json" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-    a.download = `plate-backup-${today()}.json`; a.click();
+    a.download = `macro-tracker-backup-${today()}.json`; a.click();
   };
   $("#im").onclick = () => $("#imf").click();
   $("#imf").onchange = async e => {

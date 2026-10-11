@@ -1,5 +1,5 @@
 // everything lives in this device's indexeddb. nothing is sent anywhere.
-const DB = "plate", VERSION = 1;
+const DB = "macro-tracker", VERSION = 1;
 let opened;
 
 function open() {
@@ -59,12 +59,12 @@ export async function exportAll() {
   for (const k of ["targets"]) settings[k] = await get("settings", k);
   const out = [];
   for (const m of meals) out.push({ ...m, photo: m.photo ? await blobToData(m.photo) : null });
-  return JSON.stringify({ app: "plate", version: 1, foods, meals: out, settings });
+  return JSON.stringify({ app: "macro-tracker", version: 1, foods, meals: out, settings });
 }
 
 export async function importAll(text) {
   const d = JSON.parse(text);
-  if (d.app !== "plate") throw new Error("That isn't a Plate backup");
+  if (d.app !== "macro-tracker" && d.app !== "plate") throw new Error("That isn't a Macro Tracker backup");
   await clear("foods"); await clear("meals");
   for (const f of d.foods) await put("foods", f);
   for (const m of d.meals) {

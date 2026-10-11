@@ -26,17 +26,17 @@ jobs:
         run: |
           npm init -y
           npm i @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init Plate com.plate.macros --web-dir www
+          npx cap init "Macro Tracker" com.varunaahil.macrotracker --web-dir www
           npx cap add android
           npx cap sync android
       - name: build apk
         run: cd android && ./gradlew assembleDebug
-      - run: cp android/app/build/outputs/apk/debug/app-debug.apk Plate.apk
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk macro-tracker.apk
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: Plate.apk
+          files: macro-tracker.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Plate-apk
-          path: Plate.apk
+          name: macro-tracker-apk
+          path: macro-tracker.apk

@@ -19,8 +19,8 @@ jobs:
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist/Plate-portable.exe
+          files: dist/macro-tracker.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: Plate-exe
-          path: dist/Plate-portable.exe
+          name: macro-tracker-exe
+          path: dist/macro-tracker.exe

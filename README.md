@@ -1,4 +1,4 @@
-# Plate
+# Macro Tracker
 
 Photo macro tracker that runs entirely on your phone or PC. No server, no accounts, no API costs.
 
@@ -21,9 +21,9 @@ them. Every correction teaches the app your food and your portions.
 
 ## Install
 - **Android (easiest):** repo Settings > Pages > Source: GitHub Actions. After the `pages` workflow runs, open
-  `https://<you>.github.io/<repo>/` in Chrome > menu > Install app.
+  `https://varun-aahil.github.io/macro-tracker/` in Chrome > menu > Install app.
 - **Android APK / Windows .exe:** push a tag (`git tag v1.0.0 && git push --tags`). The `android` and
-  `windows` workflows attach `Plate.apk` and `Plate-portable.exe` to the release. Allow "install unknown
+  `windows` workflows attach `macro-tracker.apk` and `macro-tracker.exe` to the release. Allow "install unknown
   apps" on the phone to sideload the APK.
 - **Run locally:** `python -m http.server 8000`, open http://localhost:8000
 - **Tests:** `node --test tests/learner.test.mjs`
