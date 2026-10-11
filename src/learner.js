@@ -112,3 +112,25 @@ export function evaluate(meals, foods) {
     zeroShot: { top1: f(zs.top1), top3: f(zs.top3) },
     adaptive: { top1: f(ad.top1), top3: f(ad.top3) } };
 }
+
+// ---- is there food in the photo at all? ----
+// the food ranking above always picks something, so this checks first.
+// it compares the photo against "food" prompts and "not food" prompts and takes the stronger side.
+export const GATE_FOOD = [
+  "a photo of food", "a plate of food", "a bowl of food", "a home cooked meal",
+  "a photo of a snack", "a photo of a drink", "a photo of fruit", "a photo of Indian food",
+  "a photo of packaged food",
+];
+export const GATE_OTHER = [
+  "a photo of a person", "a selfie of a face", "a photo of hair", "a photo of a room",
+  "a photo of a wall", "a photo of a ceiling", "a photo of a table", "a photo of a hand",
+  "a blurry photo", "a photo of a phone screen", "a photo of a document with text",
+  "a photo of an animal", "a photo of a street outside", "a photo of an empty plate",
+  "a very dark photo", "a photo of furniture",
+];
+
+export function foodGate(imgEmb, gate, threshold = 0.5) {
+  const best = list => Math.max(...list.map(e => SCALE * dot(imgEmb, e)));
+  const pFood = 1 / (1 + Math.exp(best(gate.other) - best(gate.food)));
+  return { pFood, isFood: pFood >= threshold };
+}

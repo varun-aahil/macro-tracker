@@ -81,3 +81,14 @@ test("every 5th photo meal is holdout; validation; history", () => {
   assert.equal(validateFood({ name: "ok", kcal: 100, protein: 10, carbs: 10, fat: 1 }), null);
   assert.equal(history([], "2026-10-10", 7).length, 7);
 });
+
+import { foodGate } from "../src/learner.js";
+test("food gate rejects non-food and accepts food", () => {
+  const f1 = vec(), f2 = vec(), o1 = vec(), o2 = vec();
+  const gate = { food: [f1, f2], other: [o1, o2] };
+  const nearFood = mix([[1, f1], [0.2, vec()]]);
+  const nearOther = mix([[1, o2], [0.2, vec()]]);
+  assert.equal(foodGate(nearFood, gate).isFood, true);
+  assert.equal(foodGate(nearOther, gate).isFood, false);
+  assert.ok(foodGate(nearOther, gate).pFood < 0.1);
+});

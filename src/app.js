@@ -1,6 +1,6 @@
 import * as store from "./store.js";
 import * as embed from "./embed.js";
-import { rank, pickDraft, buildExamples, typicalGrams, evaluate } from "./learner.js";
+import { rank, pickDraft, buildExamples, typicalGrams, evaluate, foodGate, GATE_FOOD, GATE_OTHER } from "./learner.js";
 import { MEAL_TYPES, DEFAULT_TARGETS, macrosFor, sumMacros, validateFood, num, buildItems,
   applyActual, dayTotals, nextSplit, stats } from "./logic.js";
 
@@ -9,6 +9,20 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 
 if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) document.documentElement.classList.add("native");
+
+const isoOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const parseISO = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const shiftDay = (iso, n) => { const d = parseISO(iso); d.setDate(d.getDate() + n); return isoOf(d); };
+const niceDate = iso => iso === today() ? "Today" : iso === shiftDay(today(), -1) ? "Yesterday"
+  : parseISO(iso).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+const ICON = {
+  today: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3.5"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
+  add: '<svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg>',
+  foods: '<svg viewBox="0 0 24 24"><path d="M7 3v7M10.5 3v7M7 10c0 1.7 1.5 2.5 1.75 2.5S10.5 11.7 10.5 10M8.75 12.5V21M17 21V3c-2.2 1.2-3.5 3.8-3.5 7.5H17"/></svg>',
+  me: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.8-3.6 3.8-5.5 7.5-5.5s6.7 1.9 7.5 5.5"/></svg>',
+  left: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  right: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+};
 
 const MEAL_LABELS = { breakfast: "Breakfast", lunch: "Lunch", snack: "Snacks", dinner: "Dinner" };
 const guessMeal = () => { const h = new Date().getHours(); return h < 11 ? "breakfast" : h < 16 ? "lunch" : h < 19 ? "snack" : "dinner"; };
@@ -31,7 +45,8 @@ function toast(msg) {
 
 function renderNav() {
   const tabs = [["today", "Today"], ["add", "Add"], ["foods", "Foods"], ["me", "Me"]];
-  $("#nav").innerHTML = tabs.map(([k, l]) => `<button class="${tab === k ? "on" : ""}" data-t="${k}">${l}</button>`).join("");
+  $("#nav").innerHTML = tabs.map(([k, l]) =>
+    `<button class="${tab === k ? "on" : ""}${k === "add" ? " plus" : ""}" data-t="${k}"><span class="ic">${ICON[k]}</span><span>${l}</span></button>`).join("");
   $("#nav").querySelectorAll("button").forEach(b => b.onclick = () => { tab = b.dataset.t; draft = null; mealPick = null; show(); });
 }
 
@@ -58,7 +73,12 @@ function viewToday(app) {
   const t = dayTotals(day), left = Math.round(targets.kcal - t.kcal);
   const urls = [];
   app.innerHTML = `
-    <div class="row spread"><h1>Macro Tracker</h1><input type="date" id="dt" value="${date}" style="width:auto"></div>
+    <h1>Macro Tracker</h1>
+    <div class="datebar">
+      <button class="icb" id="dprev" aria-label="Previous day">${ICON.left}</button>
+      <button class="datechip" id="dopen">${ICON.today}<span>${esc(niceDate(date))}</span></button>
+      <button class="icb" id="dnext" aria-label="Next day">${ICON.right}</button>
+    </div>
     <div class="card">
       <div class="big">${Math.round(t.kcal)}<span class="muted" style="font-size:16px"> kcal</span></div>
       <div class="muted">${left >= 0 ? left + " left of " + targets.kcal : (-left) + " over " + targets.kcal}</div>
@@ -86,11 +106,45 @@ function viewToday(app) {
       </section>`;
     }).join("")}`;
   app.querySelectorAll("[data-addto]").forEach(b => b.onclick = () => { mealPick = b.dataset.addto; tab = "add"; draft = null; show(); });
-  $("#dt").onchange = e => { date = e.target.value || today(); show(); };
+  $("#dprev").onclick = () => { date = shiftDay(date, -1); show(); };
+  $("#dnext").onclick = () => { date = shiftDay(date, 1); show(); };
+  $("#dopen").onclick = openCalendar;
   app.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (!confirm("Delete this meal?")) return;
     await store.del("meals", +b.dataset.del); show();
   });
+}
+
+/* ---------- calendar ---------- */
+function openCalendar() {
+  const logged = new Set(meals.map(m => m.log_date));
+  const view = parseISO(date); view.setDate(1);
+  const sheet = document.createElement("div"); sheet.className = "sheet";
+  document.body.appendChild(sheet);
+  const close = () => sheet.remove();
+  sheet.onclick = e => { if (e.target === sheet) close(); };
+  const draw = () => {
+    const y = view.getFullYear(), m = view.getMonth();
+    const lead = new Date(y, m, 1).getDay(), count = new Date(y, m + 1, 0).getDate();
+    const cells = Array.from({ length: lead }, () => "<span></span>");
+    for (let d = 1; d <= count; d++) {
+      const iso = isoOf(new Date(y, m, d));
+      cells.push(`<button class="day${iso === date ? " sel" : ""}${iso === today() ? " now" : ""}" data-d="${iso}">${d}${logged.has(iso) ? "<i></i>" : ""}</button>`);
+    }
+    sheet.innerHTML = `<div>
+      <div class="row spread"><button class="icb" id="cp" aria-label="Previous month">${ICON.left}</button>
+        <b class="calt">${view.toLocaleDateString([], { month: "long", year: "numeric" })}</b>
+        <button class="icb" id="cn" aria-label="Next month">${ICON.right}</button></div>
+      <div class="cal wk">${["S", "M", "T", "W", "T", "F", "S"].map(x => `<span>${x}</span>`).join("")}</div>
+      <div class="cal">${cells.join("")}</div>
+      <div class="row spread" style="margin-top:14px"><button class="ghost small" id="ct">Today</button><button class="ghost small" id="cx">Close</button></div></div>`;
+    $("#cp", sheet).onclick = () => { view.setMonth(view.getMonth() - 1); draw(); };
+    $("#cn", sheet).onclick = () => { view.setMonth(view.getMonth() + 1); draw(); };
+    $("#cx", sheet).onclick = close;
+    $("#ct", sheet).onclick = () => { date = today(); close(); show(); };
+    sheet.querySelectorAll(".day").forEach(b => b.onclick = () => { date = b.dataset.d; close(); show(); });
+  };
+  draw();
 }
 
 /* ---------- add ---------- */
@@ -112,6 +166,30 @@ async function ensureTextEmbeddings(onStep) {
     f.textFor = embed.promptFor(f);
     await store.put("foods", f);
   }
+}
+
+async function ensureGate() {
+  let g = await store.getSetting("gate-v1", null);
+  if (g) return g;
+  g = { food: [], other: [] };
+  for (const t of GATE_FOOD) g.food.push(await embed.embedText(t));
+  for (const t of GATE_OTHER) g.other.push(await embed.embedText(t));
+  await store.setSetting("gate-v1", g);
+  return g;
+}
+
+async function buildDraft(blob, emb) {
+  const fresh = (await store.all("foods")).filter(x => !x.archived);
+  const picked = pickDraft(rank(emb, fresh, buildExamples(meals)));
+  const byId = Object.fromEntries(fresh.map(x => [x.id, x]));
+  const items = picked.items.map(r => {
+    const food = byId[r.food_id], grams = typicalGrams(food, meals);
+    return { food_id: food.id, grams, from_pred: true, pred_grams: grams, prob: r.prob };
+  });
+  const more = picked.more.map(r => ({ food_id: r.food_id, prob: r.prob }));
+  const pred = sumMacros(items.map(i => macrosFor(byId[i.food_id], i.grams)));
+  draft = { blob, emb, items, more, pred_kcal: pred.kcal, pred_count: items.length };
+  show();
 }
 
 function viewAdd(app) {
@@ -144,21 +222,19 @@ function viewAdd(app) {
       await ensureTextEmbeddings((n, t) => say(`<p class="muted">Learning your food names (one time) ${n} / ${t}</p><progress max="${t}" value="${n}"></progress>`));
       say('<p class="muted">Looking at your plate…</p>');
       const emb = await embed.embedImage(blob);
-      const fresh = (await store.all("foods")).filter(x => !x.archived);
-      const ranked = rank(emb, fresh, buildExamples(meals));
-      const picked = pickDraft(ranked);
-      const byId = Object.fromEntries(fresh.map(x => [x.id, x]));
-      const items = picked.items.map(r => {
-        const food = byId[r.food_id], grams = typicalGrams(food, meals);
-        return { food_id: food.id, grams, from_pred: true, pred_grams: grams, prob: r.prob };
-      });
-      const more = picked.more.map(r => ({ food_id: r.food_id, prob: r.prob }));
-      const pred = sumMacros(items.map(i => macrosFor(byId[i.food_id], i.grams)));
-      draft = { blob, emb, items, more, pred_kcal: pred.kcal, pred_count: items.length };
-      show();
+      const gate = await ensureGate();
+      if (!foodGate(emb, gate).isFood) {
+        say(`<div class="card"><b>No food detected</b>
+          <p class="muted">I couldn't see a meal in that photo. Try again with the plate in frame and good light.</p>
+          <button class="ghost" id="anyway" style="width:100%">It is food, continue anyway</button></div>`);
+        $("#anyway").onclick = () => buildDraft(blob, emb);
+        return;
+      }
+      await buildDraft(blob, emb);
     } catch (err) {
       say(`<p class="warn">${esc(err.message || err)}. If this is the first run, check your internet connection and try again.</p>`);
     }
+    e.target.value = "";
   };
   $("#file").onchange = handle;
   $("#gal").onchange = handle;
@@ -254,7 +330,8 @@ function foodForm(el, food, done) {
     <div class="row"><div><label>Unit (optional, e.g. roti)</label><input id="un" value="${esc(v("unit_name"))}"></div>
     <div><label>Unit grams</label><input id="ug" type="number" inputmode="decimal" value="${v("unit_grams")}"></div></div>
     <label>How the model should picture it (optional, e.g. "chicken breast pieces marinated in red masala")</label><input id="fpr" value="${esc(v("prompt"))}">
-    <button id="fs" style="width:100%;margin-top:12px">Save food</button><div class="warn" id="fe"></div></div>`;
+    <div class="row" style="margin-top:12px"><button id="fs" style="flex:1">Save food</button><button class="ghost" id="fc2">Cancel</button></div><div class="warn" id="fe"></div></div>`;
+  $("#fc2", el).onclick = () => { el.innerHTML = ""; };
   $("#fs", el).onclick = async () => {
     const data = { name: $("#fn", el).value.trim(), kcal: $("#fk", el).value, protein: $("#fp", el).value,
       carbs: $("#fc", el).value, fat: $("#ff", el).value, unit_name: $("#un", el).value.trim() || null, unit_grams: $("#ug", el).value };
@@ -278,12 +355,12 @@ function viewFoods(app) {
     const q = $("#q").value.trim().toLowerCase();
     const list = foods.filter(f => f.name.toLowerCase().includes(q));
     $("#list").innerHTML = list.map(f => `<div class="card"><div class="row spread"><b>${esc(f.name)}</b>
-      <span><button class="small ghost" data-e="${f.id}">Edit</button> <button class="danger" data-a="${f.id}">Hide</button></span></div>
+      <span><button class="small ghost" data-e="${f.id}">Edit</button> <button class="danger" data-a="${f.id}">Delete</button></span></div>
       <div class="muted">${f.kcal} kcal · P ${f.protein} · C ${f.carbs} · F ${f.fat} per 100g${f.unit_name ? ` · 1 ${esc(f.unit_name)} = ${f.unit_grams}g` : ""}</div></div>`).join("");
     app.querySelectorAll("[data-e]").forEach(b => b.onclick = () => foodForm($("#form"), foods.find(f => f.id === +b.dataset.e), async () => { await reload(); $("#form").innerHTML = ""; load(); }));
     app.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
-      if (!confirm("Hide this food? Past meals keep it.")) return;
-      const f = foods.find(x => x.id === +b.dataset.a); await store.put("foods", { ...f, archived: 1 }); await reload(); load();
+      if (!confirm("Delete this food? Meals you already logged keep it.")) return;
+      await store.del("foods", +b.dataset.a); await reload(); load();
     });
   };
   $("#q").oninput = load;

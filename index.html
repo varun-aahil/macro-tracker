@@ -21,7 +21,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px}
-body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+body{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
 main{max-width:520px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px 18px}
 .native main{padding-top:calc(18px + max(env(safe-area-inset-top, 0px), 36px))}
 h1{font-family:var(--serif);font-weight:600;font-size:24px;margin:0;white-space:nowrap}
@@ -38,10 +38,6 @@ button.danger{background:transparent;color:var(--chili);padding:6px 8px}
 button:disabled{opacity:.5}
 input,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
 label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
-  display:flex;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;background:none;color:var(--muted);border-radius:0;padding:14px 4px;font-size:13px}
-nav button.on{color:var(--chili)}
 .big{font-family:var(--serif);font-size:44px;line-height:1}
 .bar{height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;border-radius:6px}
@@ -57,7 +53,7 @@ nav button.on{color:var(--chili)}
 .sheet>div{background:var(--paper);width:100%;max-height:85vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px;max-width:520px;margin:0 auto}
 .pick{padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer}
 .photo{width:100%;max-height:260px;object-fit:cover;border-radius:14px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:var(--ink);color:var(--paper);
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:112px;background:var(--ink);color:var(--paper);
   padding:10px 16px;border-radius:20px;font-size:14px;z-index:9}
 .cam{display:block;text-align:center;background:var(--chili);color:#fff;padding:26px;border-radius:18px;
   font-family:var(--serif);font-size:22px;cursor:pointer}
@@ -73,6 +69,29 @@ progress{width:100%;height:8px;accent-color:var(--chili)}
 .sechead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:8px;border-bottom:2px solid var(--ink)}
 .sechead b{font-family:var(--serif);font-size:20px}
 .sec .card{margin:10px 0 0}
+nav{position:fixed;z-index:4;left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:496px;
+  bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:4px;padding:6px;
+  background:var(--card);border:1px solid var(--line);border-radius:26px;box-shadow:0 10px 28px rgba(0,0,0,.22)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;color:var(--muted);
+  border-radius:20px;padding:7px 2px 6px;font-size:11.5px;font-weight:600;letter-spacing:.2px}
+nav .ic{width:44px;height:30px;display:grid;place-items:center;border-radius:15px}
+nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--chili);background:color-mix(in srgb,var(--chili) 14%,transparent)}
+nav .plus .ic{background:var(--chili);color:#fff}
+nav .plus.on{color:var(--chili)}
+.datebar{display:flex;align-items:center;gap:8px;margin:12px 0 4px}
+.icb{background:var(--card);color:var(--ink);border:1px solid var(--line);width:42px;height:42px;padding:0;border-radius:14px;display:grid;place-items:center}
+.icb svg,.datechip svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.datechip{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 14px;border-radius:14px;
+  background:var(--card);color:var(--ink);border:1px solid var(--line);font-weight:600}
+.calt{font-family:var(--serif);font-size:19px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:10px;text-align:center}
+.cal.wk{color:var(--muted);font-size:12px;font-weight:600;margin-top:14px}
+.day{position:relative;width:42px;height:42px;margin:0 auto;padding:0;background:none;color:var(--ink);border-radius:50%;font-weight:500}
+.day.now{box-shadow:inset 0 0 0 1.5px var(--chili)}
+.day.sel{background:var(--chili);color:#fff;box-shadow:none}
+.day i{position:absolute;left:50%;bottom:5px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--leaf)}
+.day.sel i{background:#fff}
 </style>
 </head>
 <body>
