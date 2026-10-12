@@ -1,5 +1,6 @@
 // the Me tab: profile, the week so far, weight, the optional weekly check-in, then the older settings.
 import * as store from "./store.js";
+import * as cloud from "./cloud.js";
 import { $, esc, today, niceDate, shiftDay, parseISO, toast, r1 } from "./ui.js";
 import { fiberTarget, GOALS, PACE_NAME, ageFrom, tdee, weeklySummary, streak, weightTrend, suggestAdjustment,
   kgToLb, lbToKg, addDays, daysBetween, macrosFromKcal } from "./plan.js";
@@ -64,6 +65,7 @@ const macroBar = (label, val, target, color) => {
   return `<div class="mrow"><span class="muted">${label}</span><div class="bar"><i style="width:${pct}%;background:${color}"></i></div><b>${val}<span class="muted"> / ${target}g</span></b></div>`;
 };
 
+let unsubAcct = null;
 export function renderMe(app, ctx) {
   const { profile, weights, targets, meals, foods, adapt, avatar } = ctx;
   const units = profile.units || "metric", t0 = today();
@@ -168,11 +170,41 @@ export function renderMe(app, ctx) {
         <p>Top pick correct: <b>${pct(ev.zeroShot.top1)}</b> at the start, <b>${pct(ev.adaptive.top1)}</b> now.</p>`
         : '<p class="muted">Every 5th photo meal is set aside as a test. Log about 10 photo meals to see this.</p>'}</div>
 
+    ${cloud.available() ? `<h2>Account</h2><div class="card" id="acct"></div>` : ""}
+
     <h2>Your data</h2><div class="card">
-      <p class="muted">Everything stays on this device. Browsers can clear site data, so save a backup now and then.</p>
+      <p class="muted">${cloud.available() ? "Signed in or not, everything works offline. A backup file is still a good extra copy." : "Everything stays on this device. Browsers can clear site data, so save a backup now and then."}</p>
       <div class="row"><button id="ex" class="ghost" style="flex:1">Save backup</button><button id="im" class="ghost" style="flex:1">Restore</button></div>
       <input type="file" id="imf" accept="application/json" style="display:none">
       <button class="danger" id="wipe" style="margin-top:10px">Delete everything on this device</button></div>`;
+
+  // ---- account ----
+  if (unsubAcct) unsubAcct();
+  const acct = $("#acct");
+  if (acct) {
+    const ago = iso => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? "just now" : m < 60 ? m + " min ago" : Math.round(m / 60) + " h ago"; };
+    const paint = st => {
+      if (!document.body.contains(acct)) return;
+      acct.innerHTML = st.user ? `<div class="row spread"><b>${esc(st.user.email || "Signed in")}</b><span class="muted">${st.busy ? "Syncing…" : st.last ? "Synced " + ago(st.last) : ""}</span></div>
+          <p class="muted">Your meals, foods, weights, profile and targets are saved to your account, so a new phone picks up where you left off. Photos stay on this device.</p>
+          ${st.error ? `<p class="warn">${esc(st.error)}</p>` : ""}
+          <div class="row"><button class="ghost" id="ac-sync" style="flex:1">Sync now</button><button class="ghost" id="ac-out" style="flex:1">Sign out</button></div>
+          <button class="danger" id="ac-del" style="margin-top:8px">Delete my cloud data</button>`
+        : `<p class="muted">Sign in with Google to keep your data safe online and use it on another phone. Photos are never uploaded.</p>
+          ${st.error ? `<p class="warn">${esc(st.error)}</p>` : ""}
+          <button id="ac-in" style="width:100%">Sign in with Google</button>`;
+      const b = id => acct.querySelector(id);
+      if (b("#ac-in")) b("#ac-in").onclick = () => cloud.signIn();
+      if (b("#ac-sync")) b("#ac-sync").onclick = async () => { await cloud.sync(); };
+      if (b("#ac-out")) b("#ac-out").onclick = async () => { await cloud.signOut(); };
+      if (b("#ac-del")) b("#ac-del").onclick = async () => {
+        if (!confirm("Delete everything saved to your account? Data on this device stays. This can't be undone.")) return;
+        try { await cloud.deleteCloudData(); toast("Cloud data deleted"); } catch (err) { toast(err.message || "Couldn't delete"); }
+      };
+    };
+    paint(cloud.getState());
+    unsubAcct = cloud.subscribe(paint);
+  }
 
   // ---- wiring ----
   $("#editp").onclick = () => ctx.editProfile();

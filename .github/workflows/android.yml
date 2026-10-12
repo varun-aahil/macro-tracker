@@ -25,12 +25,20 @@ jobs:
       - name: capacitor project
         run: |
           npm init -y
-          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/camera
+          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/app @capacitor/browser
           npx cap init "Macro Tracker" com.varunaahil.macrotracker --web-dir www
           npx cap add android
           npm i -D @capacitor/assets
           npx capacitor-assets generate --android
           npx cap sync android
+          python3 - <<'PY'
+          p = "android/app/src/main/AndroidManifest.xml"
+          s = open(p).read()
+          if "com.varunaahil.macrotracker" not in s.split("<application")[1]:
+              f = '<intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:scheme="com.varunaahil.macrotracker"/></intent-filter>'
+              s = s.replace("</activity>", f + "</activity>", 1)
+          open(p, "w").write(s)
+          PY
           grep -q 'permission.CAMERA' android/app/src/main/AndroidManifest.xml || sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <application#' android/app/src/main/AndroidManifest.xml
       - name: build apk
         run: cd android && ./gradlew assembleDebug

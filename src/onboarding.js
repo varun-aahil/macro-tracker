@@ -64,7 +64,7 @@ function check(step, d) {
   return null;
 }
 
-export function renderOnboarding(app, { existing = null, onFinish, onCancel, onRestore }) {
+export function renderOnboarding(app, { existing = null, onFinish, onCancel, onRestore, onSignIn = null }) {
   const edit = !!existing;
   const flow = edit ? FLOW.filter(s => s !== "welcome") : FLOW;
   const d = fresh(existing);
@@ -152,7 +152,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
       <div class="obbody">${body(step)}</div>
       <div class="obfoot"><div class="warn" id="oberr"></div>
         <button class="bigbtn" id="obnext">${welcome ? "Get started" : last ? (edit ? "Save changes" : "Finish") : "Continue"}</button>
-        ${welcome ? `<button class="linkbtn" id="obrestore">Restore from a backup</button><input type="file" id="obfile" accept="application/json" style="display:none">` : ""}
+        ${welcome ? `${onSignIn ? '<button class="linkbtn" id="obsignin">Sign in to restore your data</button>' : ""}<button class="linkbtn" id="obrestore">Restore from a backup</button><input type="file" id="obfile" accept="application/json" style="display:none">` : ""}
         ${edit && i === 0 ? `<button class="linkbtn" id="obcancel">Cancel</button>` : ""}
       </div></div>`;
     wire(step);
@@ -201,6 +201,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
 
     const back = $("#obback"); if (back) back.onclick = () => { if (i === 0) return onCancel && onCancel(); i--; render(); };
     const cancel = $("#obcancel"); if (cancel) cancel.onclick = () => onCancel && onCancel();
+    const si = $("#obsignin"); if (si) si.onclick = () => onSignIn();
     const rs = $("#obrestore"), file = $("#obfile");
     if (rs) { rs.onclick = () => file.click(); file.onchange = async e => { const f = e.target.files[0]; if (f) onRestore && onRestore(f); }; }
     $("#obnext").onclick = () => {

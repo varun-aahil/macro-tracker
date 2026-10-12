@@ -3,6 +3,7 @@ import { $, esc, today, isoOf, parseISO, shiftDay, niceDate, ICON, toast } from 
 import { renderOnboarding } from "./onboarding.js";
 import { renderMe, getCheckin, planInput, latestWeight } from "./me.js";
 import { ageFrom, fiberTarget } from "./plan.js";
+import * as cloud from "./cloud.js";
 import { openCamera } from "./camera.js";
 import { scanBarcode, lookup } from "./barcode.js";
 import * as embed from "./embed.js";
@@ -62,7 +63,7 @@ async function show() {
     if (gate) {
       const existing = profile ? { profile, age: ageFrom(profile.birthYear), weightKg: latestWeight(weights, 70), targets } : null;
       renderOnboarding(app, {
-        existing, onFinish: finishOnboarding,
+        existing, onFinish: finishOnboarding, onSignIn: cloud.available() ? () => cloud.signIn() : null,
         onCancel: () => { editing = false; show(); },
         onRestore: async file => {
           try { await store.importAll(await file.text()); show(); } catch (err) { toast(err.message || "That backup didn't work"); }
@@ -193,7 +194,7 @@ async function ensureTextEmbeddings(onStep) {
     onStep(++n, todo.length);
     f.textEmb = await embed.embedText(embed.promptFor(f));
     f.textFor = embed.promptFor(f);
-    await store.put("foods", f);
+    await store.put("foods", f, undefined, { quiet: true });
   }
 }
 
@@ -494,4 +495,5 @@ function viewFoods(app) {
 
 /* ---------- me ---------- */
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
-store.seedFoods().then(show);
+store.seedFoods().then(show).then(() => cloud.init(() => { if (!editing) show(); }));
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") cloud.scheduleSync(500); });
