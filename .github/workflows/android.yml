@@ -34,7 +34,7 @@ jobs:
           python3 - <<'PY'
           p = "android/app/src/main/AndroidManifest.xml"
           s = open(p).read()
-          if "com.varunaahil.macrotracker" not in s.split("<application")[1]:
+          if 'android:scheme="com.varunaahil.macrotracker"' not in s:
               f = '<intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:scheme="com.varunaahil.macrotracker"/></intent-filter>'
               s = s.replace("</activity>", f + "</activity>", 1)
           open(p, "w").write(s)

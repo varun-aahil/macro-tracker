@@ -87,7 +87,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
         <img src="icon-192.png" alt="" class="logo-lg">
         <h1>Macro Tracker</h1>
         <p class="lead">Snap your meal, check the guess, see your macros. A few quick questions first so your targets fit you. It takes about a minute.</p>
-        <p class="muted">Everything stays on this phone. No account, no sign-up.</p></div>`;
+        <p class="muted">Your data stays on this phone unless you sign in to back it up. No account needed to start.</p></div>`;
     if (step === "name") return `<h2 class="q">What should we call you?</h2>
       <input id="f-name" placeholder="Your first name" maxlength="30" value="${esc(d.name || "")}" autocomplete="given-name">`;
     if (step === "about") return `<h2 class="q">A bit about you</h2>
@@ -149,12 +149,14 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
     const welcome = step === "welcome";
     app.innerHTML = `<div class="ob">
       ${welcome ? "" : `<div class="obtop"><button class="icb" id="obback" aria-label="Back">${ICON.left}</button><div class="obprog"><i style="width:${Math.round((i) / (flow.length - 1) * 100)}%"></i></div></div>`}
-      <div class="obbody">${body(step)}</div>
+      ${welcome ? `<div class="obbody">${body(step)}<div class="welcomeacts"><div class="warn" id="oberr"></div>
+        <button class="bigbtn" id="obnext">Get started</button>
+        ${onSignIn ? '<button class="linkbtn" id="obsignin">Sign in to restore your data</button>' : ""}<button class="linkbtn" id="obrestore">Restore from a backup</button><input type="file" id="obfile" accept="application/json" style="display:none"></div></div>`
+      : `<div class="obbody">${body(step)}</div>
       <div class="obfoot"><div class="warn" id="oberr"></div>
-        <button class="bigbtn" id="obnext">${welcome ? "Get started" : last ? (edit ? "Save changes" : "Finish") : "Continue"}</button>
-        ${welcome ? `${onSignIn ? '<button class="linkbtn" id="obsignin">Sign in to restore your data</button>' : ""}<button class="linkbtn" id="obrestore">Restore from a backup</button><input type="file" id="obfile" accept="application/json" style="display:none">` : ""}
+        <button class="bigbtn" id="obnext">${last ? (edit ? "Save changes" : "Finish") : "Continue"}</button>
         ${edit && i === 0 ? `<button class="linkbtn" id="obcancel">Cancel</button>` : ""}
-      </div></div>`;
+      </div>`}</div>`;
     wire(step);
     const first = app.querySelector("input:not([type=file])"); if (first && (step === "name" || step === "body")) first.focus({ preventScroll: true });
   }

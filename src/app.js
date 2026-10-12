@@ -495,5 +495,7 @@ function viewFoods(app) {
 
 /* ---------- me ---------- */
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+let shownErr = null;
+cloud.subscribe(st => { if (st.error && st.error !== shownErr) { shownErr = st.error; toast(st.error); } if (!st.error) shownErr = null; });
 store.seedFoods().then(show).then(() => cloud.init(() => { if (!editing) show(); }));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") cloud.scheduleSync(500); });

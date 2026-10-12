@@ -1,6 +1,7 @@
 // sign in with Google (through Supabase) and keep this device in step with your account.
 // local first: the app works fully offline, and sync is a background extra. photos are never uploaded.
 import * as store from "./store.js";
+import { toast } from "./ui.js";
 import { SUPABASE_URL, SUPABASE_KEY, APP_SCHEME } from "./config.js";
 import { plan, foodRow, mealRow, settingRow, mealFromRow } from "./sync.js";
 
@@ -35,12 +36,13 @@ const real = {
     }
   },
   async finish(url) {   // the app was reopened by the sign-in link
-    const u = new URL(url), code = u.searchParams.get("code");
-    const err = u.searchParams.get("error_description") || new URLSearchParams(u.hash.slice(1)).get("error_description");
+    const u = new URL(url), code = u.searchParams.get("code"), hash = new URLSearchParams(u.hash.slice(1));
+    const err = u.searchParams.get("error_description") || hash.get("error_description");
     if (err) throw new Error(err);
-    if (!code) return;
-    const { error } = await (await client()).auth.exchangeCodeForSession(code);
-    if (error) throw error;
+    const c = await client();
+    if (code) { const { error } = await c.auth.exchangeCodeForSession(code); if (error) throw error; }
+    else if (hash.get("access_token") && hash.get("refresh_token")) { const { error } = await c.auth.setSession({ access_token: hash.get("access_token"), refresh_token: hash.get("refresh_token") }); if (error) throw error; }
+    else throw new Error("The sign-in link came back without a code. Check the Redirect URLs in Supabase.");
     try { await cap().registerPlugin("Browser").close(); } catch {}
   },
   async signOut() { await (await client()).auth.signOut(); },
@@ -74,11 +76,14 @@ export async function init(onChange) {
   store.onWrite(() => scheduleSync());
   if (isNative() && cap().registerPlugin) {
     try {
-      cap().registerPlugin("App").addListener("appUrlOpen", async ({ url }) => {
-        if (!url || !url.startsWith(APP_SCHEME.split("://")[0] + "://")) return;
-        try { await backend().finish(url); await refreshUser(); await sync(); } catch (e) { emit({ error: e.message || String(e) }); }
-      });
-    } catch {}
+      const App = cap().registerPlugin("App"), scheme = APP_SCHEME.split("://")[0] + "://";
+      const handle = async url => {
+        if (!url || !url.startsWith(scheme)) return;
+        try { await backend().finish(url); await refreshUser(); if (state.user) { toast("Signed in"); await sync(); } } catch (e) { emit({ error: e.message || String(e) }); }
+      };
+      App.addListener("appUrlOpen", ({ url }) => handle(url));
+      try { const l = await App.getLaunchUrl(); if (l && l.url) handle(l.url); } catch {}   // app was started by the sign-in link
+    } catch (e) { emit({ error: "Sign-in link handling isn't available: " + (e.message || e) }); }
   }
   let hasSession = false;
   try { hasSession = !!localStorage.getItem("mt-auth") || /[?&]code=/.test(location.search); } catch {}
