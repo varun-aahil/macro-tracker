@@ -60,7 +60,7 @@ function check(step, d) {
     if (!(t.kcal >= 800 && t.kcal <= 6000)) return "Calories should be between 800 and 6000";
     for (const k of ["protein", "carbs", "fat"]) if (!(t[k] >= 0 && t[k] <= 800)) return "Check the " + k + " number";
   }
-  if (step === "adaptive" && !d.adaptive) return "Pick one, you can change it later";
+  if (step === "adaptive" && !d.adaptive) return "Pick one. You can change it later in the Me tab";
   return null;
 }
 
@@ -86,15 +86,15 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
     if (step === "welcome") return `<div class="obhero">
         <img src="icon-192.png" alt="" class="logo-lg">
         <h1>Macro Tracker</h1>
-        <p class="lead">Snap your meal, check the guess, and see your macros. A few quick questions first, so your targets fit you. About a minute.</p>
+        <p class="lead">Snap your meal, check the guess, see your macros. A few quick questions first so your targets fit you. It takes about a minute.</p>
         <p class="muted">Everything stays on this phone. No account, no sign-up.</p></div>`;
-    if (step === "name") return `<h2 class="q">What should I call you?</h2>
+    if (step === "name") return `<h2 class="q">What should we call you?</h2>
       <input id="f-name" placeholder="Your first name" maxlength="30" value="${esc(d.name || "")}" autocomplete="given-name">`;
     if (step === "about") return `<h2 class="q">A bit about you</h2>
-      <p class="muted">Used only to estimate how many calories your body burns. It never leaves this device.</p>
+      <p class="muted">Used only to estimate how many calories you burn. It stays on this phone.</p>
       <label>Sex</label><div class="opts row3" id="o-sex">${SEX.map(([v, l]) => opt(v, d.sex, l, "")).join("")}</div>
       <label>Age</label><input id="f-age" type="number" inputmode="numeric" placeholder="Years" value="${esc(d.age ?? "")}">
-      <div class="note" id="agenote">${num(d.age) !== null && num(d.age) < 18 ? "Under 18 you're still growing, so I'll only suggest maintaining or building. A doctor or dietitian is the right person for weight goals." : ""}</div>`;
+      <div class="note" id="agenote">${num(d.age) !== null && num(d.age) < 18 ? "Under 18, the app only offers maintaining or building. For weight loss, please talk to a doctor or dietitian." : ""}</div>`;
     if (step === "body") {
       const imp = d.units === "imperial";
       return `<h2 class="q">Your height and weight</h2>
@@ -120,7 +120,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
       const t = d.targets, c = d.calc;
       const sum = Math.round((t.protein || 0) * 4 + (t.carbs || 0) * 4 + (t.fat || 0) * 9);
       return `<h2 class="q">Your daily targets</h2>
-        ${c ? `<p class="muted">Your body burns about <b>${c.bmr}</b> kcal at rest and about <b>${c.tdee}</b> with your activity. To ${esc(goalText())}, I'm aiming for the numbers below.</p>` : ""}
+        ${c ? `<p class="muted">You burn about <b>${c.bmr}</b> kcal at rest and about <b>${c.tdee}</b> on an average day. To ${esc(goalText())}, these are the daily targets we suggest.</p>` : ""}
         <div class="card tgt">
           <label>Calories</label><input id="t-kcal" type="number" inputmode="numeric" value="${esc(t.kcal)}">
           <div class="row"><div><label>Protein (g)</label><input id="t-p" type="number" inputmode="numeric" value="${esc(t.protein)}"></div>
@@ -132,13 +132,13 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
         <p class="note">These are estimates, not medical advice. If you have a health condition, are pregnant, or have a history of disordered eating, check with a doctor or dietitian first.</p>
         <div class="row" style="margin-top:6px"><button class="ghost small" id="t-reset">Reset to calculated</button>${edit ? '<button class="ghost small" id="t-keep">Keep my current targets</button>' : ""}</div>`;
     }
-    if (step === "adaptive") return `<h2 class="q">Adjust my targets as I go?</h2>
-      <p class="muted">Bodies differ from formulas. If you want, I'll compare what you eat with how your weight moves and suggest small changes.</p>
+    if (step === "adaptive") return `<h2 class="q">Keep your targets up to date?</h2>
+      <p class="muted">Everyone burns calories a little differently. Turn this on and once a week the app looks at what you ate and how your weight changed, then suggests a small tweak to your targets.</p>
       <div class="opts" id="o-ad">
-        ${opt("suggest", d.adaptive, "Yes, suggest changes", "About once a week I'll check in. You approve every change, nothing moves on its own.")}
-        ${opt("off", d.adaptive, "No, keep them fixed", "Targets stay exactly as set. You can switch this on later in Me.")}
+        ${opt("suggest", d.adaptive, "Yes, suggest changes", "A weekly check-in. Nothing changes unless you tap Apply.")}
+        ${opt("off", d.adaptive, "No, keep them fixed", "Your targets stay as you set them. You can turn this on any time from the Me tab at the bottom.")}
       </div>
-      <p class="note">It works best if you weigh yourself about once a week and log most of your meals.</p>`;
+      <p class="note">It works best if you weigh yourself once a week and log most of your meals.</p>`;
     return "";
   }
 
@@ -156,7 +156,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
         ${edit && i === 0 ? `<button class="linkbtn" id="obcancel">Cancel</button>` : ""}
       </div></div>`;
     wire(step);
-    const first = app.querySelector("input:not([type=file])"); if (first && !welcome && step !== "targets") first.focus({ preventScroll: true });
+    const first = app.querySelector("input:not([type=file])"); if (first && (step === "name" || step === "body")) first.focus({ preventScroll: true });
   }
 
   function wire(step) {
@@ -165,7 +165,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
 
     on("#f-name", e => d.name = e.target.value);
     on("#f-age", e => { d.age = e.target.value; d.touched = false; const a = num(d.age), n = $("#agenote");
-      if (n) n.textContent = a !== null && a < 18 ? "Under 18 you're still growing, so I'll only suggest maintaining or building. A doctor or dietitian is the right person for weight goals." : ""; });
+      if (n) n.textContent = a !== null && a < 18 ? "Under 18, the app only offers maintaining or building. For weight loss, please talk to a doctor or dietitian." : ""; });
     pick("#o-sex", v => { d.sex = v; d.touched = false; });
     on("#f-h", e => { d.hIn = e.target.value; d.touched = false; }); on("#f-ft", e => { d.ft = e.target.value; d.touched = false; });
     on("#f-in", e => { d.inch = e.target.value; d.touched = false; }); on("#f-w", e => { d.wIn = e.target.value; d.touched = false; });

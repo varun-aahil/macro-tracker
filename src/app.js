@@ -2,7 +2,7 @@ import * as store from "./store.js";
 import { $, esc, today, isoOf, parseISO, shiftDay, niceDate, ICON, toast } from "./ui.js";
 import { renderOnboarding } from "./onboarding.js";
 import { renderMe, getCheckin, planInput, latestWeight } from "./me.js";
-import { ageFrom } from "./plan.js";
+import { ageFrom, fiberTarget } from "./plan.js";
 import * as embed from "./embed.js";
 import { rank, pickDraft, buildExamples, typicalGrams, evaluate, foodGate, GATE_FOOD, GATE_OTHER } from "./learner.js";
 import { MEAL_TYPES, DEFAULT_TARGETS, macrosFor, sumMacros, validateFood, num, buildItems,
@@ -16,7 +16,8 @@ let mealPick = null;
 
 let tab = "today", date = today(), draft = null;
 let foods = [], meals = [], targets = DEFAULT_TARGETS;
-let profile = null, weights = [], adapt = null, editing = false, pending = null;
+const collapsed = new Set((() => { try { return JSON.parse(localStorage.getItem("mt-collapsed") || "[]"); } catch { return []; } })());
+let avatar = null, profile = null, weights = [], adapt = null, editing = false, pending = null;
 
 async function reload() {
   foods = (await store.all("foods")).filter(f => !f.archived).sort((a, b) => a.name.localeCompare(b.name));
@@ -25,6 +26,7 @@ async function reload() {
   profile = await store.getSetting("profile", null);
   weights = await store.getSetting("weights", []);
   adapt = await store.getSetting("adapt", null);
+  avatar = await store.getSetting("avatar", null);
   const c = profile ? getCheckin({ profile, targets, meals, weights, adapt, todayISO: today() }) : null;
   pending = c && c.state === "suggest" ? c : null;
 }
@@ -70,7 +72,7 @@ async function show() {
     if (tab === "today") viewToday(app);
     else if (tab === "add") draft ? viewReview(app) : viewAdd(app);
     else if (tab === "foods") viewFoods(app);
-    else renderMe(app, { profile, weights, targets, meals, foods, adapt, refresh: show, editProfile: () => { editing = true; show(); } });
+    else renderMe(app, { profile, avatar, weights, targets, meals, foods, adapt, refresh: show, editProfile: () => { editing = true; show(); } });
   } catch (e) { app.innerHTML = `<div class="card warn">${esc(e.message)}</div>`; }
 }
 
@@ -103,24 +105,31 @@ function viewToday(app) {
         ${barRow("Protein", t.protein, targets.protein, "var(--leaf)")}
         ${barRow("Carbs", t.carbs, targets.carbs, "var(--wheat)")}
         ${barRow("Fat", t.fat, targets.fat, "var(--sky)")}
+        ${barRow("Fibre", t.fiber || 0, targets.fiber ?? fiberTarget(targets.kcal), "var(--leaf2, var(--leaf))")}
       </div></div>
     ${MEAL_TYPES.map(type => {
       const ms = day.filter(m => (MEAL_TYPES.includes(m.meal_type) ? m.meal_type : "snack") === type);
-      const st = dayTotals(ms);
-      return `<section class="sec">
-        <div class="sechead"><div><b>${MEAL_LABELS[type]}</b>
-          <div class="muted">${ms.length ? `${Math.round(st.kcal)} kcal · P ${Math.round(st.protein)} · C ${Math.round(st.carbs)} · F ${Math.round(st.fat)}` : "Nothing yet"}</div></div>
+      const st = dayTotals(ms), shut = collapsed.has(type) && ms.length > 0;
+      return `<section class="sec${shut ? " shut" : ""}">
+        <div class="sechead"><button class="sectoggle" data-toggle="${type}" aria-expanded="${!shut}" ${ms.length ? "" : "disabled"}>
+          <span class="chev">${ICON.chev}</span><span><b>${MEAL_LABELS[type]}${ms.length ? ` <span class="count">${ms.length}</span>` : ""}</b>
+          <span class="muted sub">${ms.length ? `${Math.round(st.kcal)} kcal · P ${Math.round(st.protein)} · C ${Math.round(st.carbs)} · F ${Math.round(st.fat)}` : "Nothing yet"}</span></span></button>
           <button class="small ghost" data-addto="${type}">+ Add</button></div>
-        ${ms.map(m => { const u = m.photo ? URL.createObjectURL(m.photo) : null; if (u) urls.push(u);
+        ${shut ? "" : ms.map(m => { const u = m.photo ? URL.createObjectURL(m.photo) : null; if (u) urls.push(u);
           const time = new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
           return `<div class="card meal">
           ${u ? `<img src="${u}" alt="">` : ""}
           <div class="row spread"><span class="muted">${esc(time)}</span><b>${Math.round(m.totals.kcal)} kcal</b></div>
           <div>${m.items.map(i => esc(i.food_name) + " " + Math.round(i.grams) + "g").join(" · ")}</div>
-          <div class="muted">P ${Math.round(m.totals.protein)} · C ${Math.round(m.totals.carbs)} · F ${Math.round(m.totals.fat)}${m.actual ? " · numbers you entered" : ""}</div>
+          <div class="muted">P ${Math.round(m.totals.protein)} · C ${Math.round(m.totals.carbs)} · F ${Math.round(m.totals.fat)}${m.totals.fiber ? ` · Fibre ${Math.round(m.totals.fiber)}` : ""}${m.actual ? " · numbers you entered" : ""}</div>
           <button class="danger" data-del="${m.id}">Delete</button></div>`; }).join("")}
       </section>`;
     }).join("")}`;
+  app.querySelectorAll("[data-toggle]").forEach(b => b.onclick = () => {
+    const k = b.dataset.toggle; collapsed.has(k) ? collapsed.delete(k) : collapsed.add(k);
+    try { localStorage.setItem("mt-collapsed", JSON.stringify([...collapsed])); } catch {}
+    show();
+  });
   app.querySelectorAll("[data-addto]").forEach(b => b.onclick = () => { mealPick = b.dataset.addto; tab = "add"; draft = null; show(); });
   const gc = $("#gocheck"); if (gc) gc.onclick = () => { tab = "me"; show(); };
   $("#dprev").onclick = () => { date = shiftDay(date, -1); show(); };
@@ -219,8 +228,18 @@ function viewAdd(app) {
     <button class="ghost" id="manual" style="width:100%;margin-top:14px">Log without a photo</button>
     <div id="busy"></div>`;
   $("#manual").onclick = () => { draft = { blob: null, emb: null, items: [], more: [], pred_kcal: null, pred_count: 0 }; show(); };
-  const handle = async e => {
-    const f = e.target.files[0]; if (!f) return;
+  const handle = e => { const f = e.target.files[0]; if (f) handleFile(f); };
+  // inside the app the web camera input can open the front camera, so use the native camera plugin and ask for the back one
+  const nativeCam = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
+  if (nativeCam) $("#file").addEventListener("click", async e => {
+    e.preventDefault();
+    try {
+      const r = await nativeCam.getPhoto({ source: "CAMERA", direction: "REAR", resultType: "dataUrl", quality: 90, correctOrientation: true });
+      const blob = await (await fetch(r.dataUrl)).blob();
+      handleFile(new File([blob], "photo.jpg", { type: blob.type || "image/jpeg" }));
+    } catch (err) { if (!/cancel/i.test(String(err && (err.message || err)))) toast("Couldn't open the camera"); }
+  });
+  const handleFile = async f => {
     const busy = $("#busy");
     const say = html => busy.innerHTML = html;
     try {
@@ -338,6 +357,7 @@ function foodForm(el, food, done) {
     <div><label>Protein</label><input id="fp" type="number" inputmode="decimal" value="${v("protein")}"></div></div>
     <div class="row"><div><label>Carbs</label><input id="fc" type="number" inputmode="decimal" value="${v("carbs")}"></div>
     <div><label>Fat</label><input id="ff" type="number" inputmode="decimal" value="${v("fat")}"></div></div>
+    <div class="row"><div><label>Fibre (optional)</label><input id="fib" type="number" inputmode="decimal" value="${v("fiber")}"></div><div></div></div>
     <div class="row"><div><label>Unit (optional, e.g. roti)</label><input id="un" value="${esc(v("unit_name"))}"></div>
     <div><label>Unit grams</label><input id="ug" type="number" inputmode="decimal" value="${v("unit_grams")}"></div></div>
     <label>How the model should picture it (optional, e.g. "chicken breast pieces marinated in red masala")</label><input id="fpr" value="${esc(v("prompt"))}">
@@ -345,12 +365,12 @@ function foodForm(el, food, done) {
   $("#fc2", el).onclick = () => { el.innerHTML = ""; };
   $("#fs", el).onclick = async () => {
     const data = { name: $("#fn", el).value.trim(), kcal: $("#fk", el).value, protein: $("#fp", el).value,
-      carbs: $("#fc", el).value, fat: $("#ff", el).value, unit_name: $("#un", el).value.trim() || null, unit_grams: $("#ug", el).value };
+      carbs: $("#fc", el).value, fat: $("#ff", el).value, unit_name: $("#un", el).value.trim() || null, unit_grams: $("#ug", el).value, fiber: $("#fib", el).value };
     const err = validateFood(data);
     if (err) { $("#fe", el).textContent = err; return; }
     if (foods.some(f => f.name.toLowerCase() === data.name.toLowerCase() && (!food || f.id !== food.id))) { $("#fe", el).textContent = "You already have a food with that name"; return; }
     const rec = { ...(food || { source: "custom", archived: 0 }), name: data.name,
-      kcal: num(data.kcal), protein: num(data.protein), carbs: num(data.carbs), fat: num(data.fat),
+      kcal: num(data.kcal), protein: num(data.protein), carbs: num(data.carbs), fat: num(data.fat), fiber: num(data.fiber) ?? 0,
       unit_name: data.unit_name, unit_grams: data.unit_name ? num(data.unit_grams) : null,
       prompt: $("#fpr", el).value.trim() || undefined };
     const id = await store.put("foods", rec);
@@ -377,6 +397,7 @@ function openFoodInfo(food, { onEdit, onDelete }) {
     <p class="note">Percentages are the share of the calories that come from each macro.</p>` : ""}
     <div class="irows">
       ${food.unit_name ? `<div><span class="muted">1 ${esc(food.unit_name)} (${food.unit_grams} g)</span><b>${at(food.unit_grams)}</b></div>` : ""}
+      <div><span class="muted">Fibre per 100 g</span><b>${food.fiber ? food.fiber + " g" : "not set"}</b></div>
       <div><span class="muted">${uses.length ? "Your usual portion" : "Starting portion"} (${typical} g)</span><b>${at(typical)}</b></div>
       <div><span class="muted">Logged</span><b>${uses.length ? `${uses.length} time${uses.length === 1 ? "" : "s"}, last ${esc(niceDate(last))}` : "Not yet"}</b></div>
     </div>

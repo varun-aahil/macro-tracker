@@ -1,7 +1,7 @@
 // the Me tab: profile, the week so far, weight, the optional weekly check-in, then the older settings.
 import * as store from "./store.js";
 import { $, esc, today, niceDate, shiftDay, parseISO, toast, r1 } from "./ui.js";
-import { GOALS, PACE_NAME, ageFrom, tdee, weeklySummary, streak, weightTrend, suggestAdjustment,
+import { fiberTarget, GOALS, PACE_NAME, ageFrom, tdee, weeklySummary, streak, weightTrend, suggestAdjustment,
   kgToLb, lbToKg, addDays, daysBetween, macrosFromKcal } from "./plan.js";
 import { stats, num } from "./logic.js";
 import { evaluate } from "./learner.js";
@@ -38,11 +38,11 @@ function barChart(days, target) {
     const x = gap + i * (bw + gap), top = y(d.kcal);
     const over = d.logged && d.kcal > target * 1.1;
     const fill = !d.logged ? "var(--line)" : over ? "var(--wheat)" : "var(--chili)";
-    return `<rect x="${x}" y="${d.logged ? top : H - pad - 3}" width="${bw}" height="${d.logged ? H - pad - top : 3}" rx="6" style="fill:${fill}"/>
-      <text x="${x + bw / 2}" y="${H - 4}" text-anchor="middle" style="fill:var(--muted);font-size:11px">${names[parseISO(d.date).getDay()]}</text>`;
+    return `<g class="barhit" data-i="${i}"><rect class="hit" x="${x - gap / 2}" y="0" width="${bw + gap}" height="${H}" style="fill:transparent"/><rect class="sel" x="${x - 3}" y="2" width="${bw + 6}" height="${H - 4}" rx="9" style="fill:var(--line);opacity:0"/><rect x="${x}" y="${d.logged ? top : H - pad - 3}" width="${bw}" height="${d.logged ? H - pad - top : 3}" rx="6" style="fill:${fill}"/>
+      <text x="${x + bw / 2}" y="${H - 4}" text-anchor="middle" style="fill:var(--muted);font-size:11px">${names[parseISO(d.date).getDay()]}</text></g>`;
   }).join("");
   return `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Calories for the last 7 days">
-    <line x1="0" x2="${W}" y1="${y(target)}" y2="${y(target)}" style="stroke:var(--ink);stroke-dasharray:4 4;opacity:.45"/>${bars}</svg>`;
+    ${bars}<line x1="0" x2="${W}" y1="${y(target)}" y2="${y(target)}" style="stroke:var(--ink);stroke-dasharray:4 4;opacity:.45;pointer-events:none"/></svg>`;
 }
 
 function lineChart(points, units) {
@@ -65,7 +65,7 @@ const macroBar = (label, val, target, color) => {
 };
 
 export function renderMe(app, ctx) {
-  const { profile, weights, targets, meals, foods, adapt } = ctx;
+  const { profile, weights, targets, meals, foods, adapt, avatar } = ctx;
   const units = profile.units || "metric", t0 = today();
   const wNow = latestWeight(weights, null);
   const firstW = weights.length ? weights[0].kg : wNow;
@@ -105,7 +105,7 @@ export function renderMe(app, ctx) {
       body = `<div class="card sug"><div class="muted">Suggested daily target</div>
           <div class="big" style="font-size:34px">${checkin.kcal}<span class="muted" style="font-size:15px"> kcal</span></div>
           <div class="muted">${sign(checkin.change)}${Math.abs(checkin.change)} from now (${targets.kcal}) · P ${checkin.protein} · C ${checkin.carbs} · F ${checkin.fat}</div></div>
-        <p>Over ${f.usableDays} logged days you averaged ${f.avgIntake} kcal, and your weight moved ${sign(f.perWeek)}${Math.abs(f.perWeek)} kg a week. Your goal is ${goalTxt}. Your body seems to burn about ${f.estBurn} kcal a day, so I'm nudging your target.</p>
+        <p>Over ${f.usableDays} logged days you averaged ${f.avgIntake} kcal, and your weight moved ${sign(f.perWeek)}${Math.abs(f.perWeek)} kg a week. Your goal is ${goalTxt}. Your body seems to burn about ${f.estBurn} kcal a day, so we suggest nudging your target.</p>
         <div class="row"><button id="ad-yes" style="flex:1">Apply</button><button class="ghost" id="ad-no">Not now</button></div>
         <p class="note">Small steps only. I never move more than 200 kcal at once.</p>`;
     }
@@ -118,7 +118,8 @@ export function renderMe(app, ctx) {
   const recent = [...weights].reverse().slice(0, 5);
 
   app.innerHTML = `
-    <div class="mehead"><div class="avatar">${esc((profile.name[0] || "?").toUpperCase())}</div>
+    <div class="mehead"><button class="avatar" id="avbtn" aria-label="Change profile photo">${avatar ? `<img src="${avatar}" alt="">` : esc((profile.name[0] || "?").toUpperCase())}<span class="avcam">+</span></button>
+      <input type="file" id="avfile" accept="image/*" style="display:none">
       <div style="flex:1;min-width:0"><h1 style="white-space:normal">${esc(profile.name)}</h1><div class="muted">${esc(goalLine)}</div></div>
       <button class="small ghost" id="editp">Edit</button></div>
 
@@ -134,7 +135,9 @@ export function renderMe(app, ctx) {
       ${week.loggedDays ? `${barChart(week.days, targets.kcal)}
         <div class="row spread" style="margin-top:6px"><div><b>${week.avg.kcal}</b> <span class="muted">kcal average</span></div>
           ${week.prevAvg ? `<span class="muted">${sign(week.avg.kcal - week.prevAvg.kcal) || "±"}${Math.abs(week.avg.kcal - week.prevAvg.kcal)} vs the week before</span>` : ""}</div>
-        <div class="macros2">${macroBar("Protein", week.avg.protein, targets.protein, "var(--leaf)")}${macroBar("Carbs", week.avg.carbs, targets.carbs, "var(--wheat)")}${macroBar("Fat", week.avg.fat, targets.fat, "var(--sky)")}</div>
+        <div id="daydetail" class="daydetail"></div>
+        <div class="muted" style="margin-top:12px">Daily average</div>
+        <div class="macros2">${macroBar("Protein", week.avg.protein, targets.protein, "var(--leaf)")}${macroBar("Carbs", week.avg.carbs, targets.carbs, "var(--wheat)")}${macroBar("Fat", week.avg.fat, targets.fat, "var(--sky)")}${macroBar("Fibre", week.avg.fiber, targets.fiber ?? fiberTarget(targets.kcal), "var(--leaf)")}</div>
         <p class="note">${week.loggedDays} of 7 days logged, ${week.onTarget} within 10% of your calories. Averages only count days you logged.</p>`
         : '<p class="muted">Log a meal and your week shows up here.</p>'}</div>
 
@@ -181,6 +184,42 @@ export function renderMe(app, ctx) {
     const next = weights.filter(w => w.date !== t0).concat({ date: t0, kg: r1(kg) }).sort((a, b) => a.date.localeCompare(b.date));
     await store.setSetting("weights", next); toast("Logged"); ctx.refresh();
   };
+  // tap a bar to see that day
+  const showDay = i => {
+    const d = week.days[i]; if (!d) return;
+    app.querySelectorAll(".barhit .sel").forEach((r, j) => r.style.opacity = j === i ? 0.9 : 0);
+    const box = $("#daydetail"); if (!box) return;
+    box.innerHTML = `<div class="row spread"><b>${esc(niceDate(d.date))}</b>${d.logged ? `<b>${Math.round(d.kcal)} kcal</b>` : '<span class="muted">Nothing logged</span>'}</div>
+      ${d.logged ? `<div class="muted">${Math.round(d.kcal)} of ${targets.kcal} kcal · P ${Math.round(d.protein)} · C ${Math.round(d.carbs)} · F ${Math.round(d.fat)} · Fibre ${Math.round(d.fiber || 0)}</div>` : ""}`;
+  };
+  app.querySelectorAll(".barhit").forEach(g => g.onclick = () => showDay(+g.dataset.i));
+  if (week.days) showDay(week.days.length - 1);
+
+  // profile photo
+  const avf = $("#avfile");
+  if (avf) {
+    $("#avbtn").onclick = () => {
+      if (!avatar) { avf.click(); return; }
+      const sheet = document.createElement("div"); sheet.className = "sheet";
+      sheet.innerHTML = `<div><b class="calt">Profile photo</b>
+        <div class="row" style="margin-top:12px"><button id="av-new" style="flex:1">Choose a new photo</button><button id="av-rm" class="ghost danger" style="flex:1">Remove</button></div>
+        <button class="linkbtn" id="av-x" style="margin-top:6px">Cancel</button></div>`;
+      document.body.appendChild(sheet);
+      sheet.onclick = e => { if (e.target === sheet) sheet.remove(); };
+      $("#av-x", sheet).onclick = () => sheet.remove();
+      $("#av-new", sheet).onclick = () => { sheet.remove(); avf.click(); };
+      $("#av-rm", sheet).onclick = async () => { sheet.remove(); await store.setSetting("avatar", null); ctx.refresh(); };
+    };
+    avf.onchange = async () => {
+      const f = avf.files[0]; if (!f) return;
+      try {
+        const bmp = await createImageBitmap(f, { imageOrientation: "from-image" });
+        const side = Math.min(bmp.width, bmp.height), c = document.createElement("canvas"); c.width = c.height = 256;
+        c.getContext("2d").drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 256, 256);
+        await store.setSetting("avatar", c.toDataURL("image/jpeg", 0.85)); ctx.refresh();
+      } catch { toast("Couldn't use that photo"); }
+    };
+  }
   app.querySelectorAll("[data-wd]").forEach(b => b.onclick = async () => {
     if (!confirm("Delete this weight entry?")) return;
     await store.setSetting("weights", weights.filter(w => w.date !== b.dataset.wd)); ctx.refresh();
@@ -200,7 +239,7 @@ export function renderMe(app, ctx) {
   const no = $("#ad-no");
   if (no) no.onclick = async () => {
     await store.setSetting("adapt", { ...(adapt || {}), snoozeUntil: addDays(t0, 7) });
-    toast("Okay, I'll check again next week"); ctx.refresh();
+    toast("Okay, we'll check again next week"); ctx.refresh();
   };
 
   $("#ts").onclick = async () => {

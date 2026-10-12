@@ -52,6 +52,8 @@ export function macrosFromKcal({ kcal, weightKg, goal }) {
   return { protein: Math.round(protein), carbs: Math.round(carbs), fat: Math.round(fat) };
 }
 
+export const fiberTarget = kcal => Math.max(20, Math.round(kcal / 1000 * 14));   // about 14 g per 1000 kcal
+
 // p: { sex, age, heightCm, weightKg, activity, goal, pace }
 export function makeTargets(p, tdeeOverride) {
   const t = tdeeOverride ?? tdee(p);
@@ -63,7 +65,7 @@ export function makeTargets(p, tdeeOverride) {
   const floor = floorKcal(p.sex);
   if (kcal < floor) { kcal = floor; notes.push(`I won't suggest less than ${floor} kcal a day.`); }
   kcal = Math.round(kcal / 10) * 10;
-  return { kcal, ...macrosFromKcal({ kcal, weightKg: p.weightKg, goal: p.goal }),
+  return { kcal, ...macrosFromKcal({ kcal, weightKg: p.weightKg, goal: p.goal }), fiber: fiberTarget(kcal),
     bmr: Math.round(bmr(p)), tdee: Math.round(t), delta: Math.round(kcal - t), notes };
 }
 
@@ -84,8 +86,8 @@ export function validateProfile(p) {
 export function dailyTotals(meals) {
   const by = {};
   for (const m of meals) {
-    const d = (by[m.log_date] ||= { kcal: 0, protein: 0, carbs: 0, fat: 0, meals: 0 });
-    for (const k of ["kcal", "protein", "carbs", "fat"]) d[k] += m.totals[k] || 0;
+    const d = (by[m.log_date] ||= { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, meals: 0 });
+    for (const k of ["kcal", "protein", "carbs", "fat", "fiber"]) d[k] += m.totals[k] || 0;
     d.meals++;
   }
   return by;
@@ -93,13 +95,13 @@ export function dailyTotals(meals) {
 
 export function weeklySummary(meals, endISO, targetKcal, days = 7) {
   const by = dailyTotals(meals);
-  const row = d => by[d] ? { date: d, logged: true, ...by[d] } : { date: d, logged: false, kcal: 0, protein: 0, carbs: 0, fat: 0, meals: 0 };
+  const row = d => by[d] ? { date: d, logged: true, ...by[d] } : { date: d, logged: false, kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, meals: 0 };
   const list = Array.from({ length: days }, (_, i) => row(addDays(endISO, i - days + 1)));
   const avgOf = rows => {
     const L = rows.filter(r => r.logged);
     if (!L.length) return null;
     const m = k => Math.round(L.reduce((a, r) => a + r[k], 0) / L.length);
-    return { kcal: m("kcal"), protein: m("protein"), carbs: m("carbs"), fat: m("fat") };
+    return { kcal: m("kcal"), protein: m("protein"), carbs: m("carbs"), fat: m("fat"), fiber: m("fiber") };
   };
   const prev = Array.from({ length: days }, (_, i) => row(addDays(endISO, i - 2 * days + 1)));
   const logged = list.filter(r => r.logged);

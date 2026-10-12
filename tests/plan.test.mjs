@@ -115,3 +115,13 @@ test("incomplete logging days are ignored", () => {
   const weights = [0, 7, 13].map(d => ({ date: addDays(today, -13 + d), kg: 80 }));
   assert.equal(suggestAdjustment({ profile: person, targets: { kcal: 1870 }, meals, weights, today }).status, "not_enough_data");
 });
+
+test("fibre target and totals", async () => {
+  const { fiberTarget } = await import("../src/plan.js");
+  const { macrosFor, sumMacros } = await import("../src/logic.js");
+  assert.equal(makeTargets(person).fiber, fiberTarget(1870));
+  assert.ok(fiberTarget(1870) >= 25 && fiberTarget(1870) <= 27);
+  assert.equal(macrosFor({ kcal: 100, protein: 1, carbs: 1, fat: 1, fiber: 6 }, 50).fiber, 3);
+  assert.equal(sumMacros([{ kcal: 1, fiber: 2 }, { kcal: 1 }]).fiber, 2);
+  assert.equal(weeklySummary([{ log_date: "2026-10-11", totals: { kcal: 2000, protein: 1, carbs: 1, fat: 1, fiber: 20 } }], "2026-10-11", 2000).avg.fiber, 20);
+});

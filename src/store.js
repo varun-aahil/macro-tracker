@@ -41,7 +41,12 @@ export async function getSetting(key, fallback) {
 export const setSetting = (key, value) => put("settings", value, key);
 
 export async function seedFoods() {
-  if ((await all("foods")).length) return;
+  const have = await all("foods");
+  if (have.length) {   // older installs: fill in fibre for the starter foods, never touching edited values
+    const seed = await (await fetch("foods.json")).json(), by = Object.fromEntries(seed.map(f => [f.name, f.fiber]));
+    for (const f of have) if (f.source === "seed" && f.fiber === undefined && by[f.name] !== undefined) await put("foods", { ...f, fiber: by[f.name] });
+    return;
+  }
   const seed = await (await fetch("foods.json")).json();
   const db = await open();
   await new Promise((resolve, reject) => {
@@ -51,7 +56,7 @@ export async function seedFoods() {
   });
 }
 
-const SETTING_KEYS = ["targets", "profile", "weights", "adapt"];
+const SETTING_KEYS = ["targets", "profile", "weights", "adapt", "avatar"];
 
 // ---- backup. browsers can wipe site data, so keep a copy somewhere safe ----
 const blobToData = b => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b); });

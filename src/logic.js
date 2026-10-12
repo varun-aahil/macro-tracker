@@ -1,19 +1,20 @@
 // plain functions, no browser apis, so they can be tested in node
 export const KEYS = ["kcal", "protein", "carbs", "fat"];
+const ALL = [...KEYS, "fiber"];   // fibre is optional, so it is kept out of KEYS (validation, learning)
 export const MEAL_TYPES = ["breakfast", "lunch", "snack", "dinner"];
-export const DEFAULT_TARGETS = { kcal: 2200, protein: 150, carbs: 250, fat: 70 };
+export const DEFAULT_TARGETS = { kcal: 2200, protein: 150, carbs: 250, fat: 70, fiber: 30 };
 
 const r1 = n => Math.round(n * 10) / 10;
 
 export function macrosFor(food, grams) {
   const out = {};
-  for (const k of KEYS) out[k] = r1((food[k] || 0) * grams / 100);
+  for (const k of ALL) out[k] = r1((food[k] || 0) * grams / 100);
   return out;
 }
 
 export function sumMacros(rows) {
   const out = {};
-  for (const k of KEYS) out[k] = r1(rows.reduce((a, r) => a + (r[k] || 0), 0));
+  for (const k of ALL) out[k] = r1(rows.reduce((a, r) => a + (r[k] || 0), 0));
   return out;
 }
 
@@ -32,6 +33,7 @@ export function validateFood(d) {
     if (n === null || n < 0) return `Enter ${k} per 100 g`;
   }
   if (num(d.kcal) > 900) return "That's more than 900 kcal per 100 g, check the number";
+  if (num(d.fiber) !== null && (num(d.fiber) < 0 || num(d.fiber) > 100)) return "Fibre per 100 g should be between 0 and 100";
   if (num(d.protein) + num(d.carbs) + num(d.fat) > 105) return "Protein + carbs + fat can't be over 100 g per 100 g";
   const ug = num(d.unit_grams);
   if ((d.unit_name && ug === null) || (ug !== null && !d.unit_name)) return "Fill both unit name and unit grams, or neither";
@@ -59,7 +61,7 @@ export function applyActual(items, actual) {
     const f = Math.max(0.1, Math.min(10, a.kcal / computed.kcal));
     scaled = items.map(it => {
       const grams = r1(it.grams * f);
-      return { ...it, grams, kcal: r1(it.kcal * f), protein: r1(it.protein * f), carbs: r1(it.carbs * f), fat: r1(it.fat * f) };
+      return { ...it, grams, kcal: r1(it.kcal * f), protein: r1(it.protein * f), carbs: r1(it.carbs * f), fat: r1(it.fat * f), fiber: r1((it.fiber || 0) * f) };
     });
   }
   const totals = { ...sumMacros(scaled), ...a };

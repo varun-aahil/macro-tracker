@@ -25,12 +25,13 @@ jobs:
       - name: capacitor project
         run: |
           npm init -y
-          npm i @capacitor/core @capacitor/cli @capacitor/android
+          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/camera
           npx cap init "Macro Tracker" com.varunaahil.macrotracker --web-dir www
           npx cap add android
           npm i -D @capacitor/assets
           npx capacitor-assets generate --android
           npx cap sync android
+          grep -q 'permission.CAMERA' android/app/src/main/AndroidManifest.xml || sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <application#' android/app/src/main/AndroidManifest.xml
       - name: build apk
         run: cd android && ./gradlew assembleDebug
       - run: cp android/app/build/outputs/apk/debug/app-debug.apk macro-tracker.apk

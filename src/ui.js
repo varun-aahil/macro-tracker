@@ -9,6 +9,7 @@ export const shiftDay = (iso, n) => { const d = parseISO(iso); d.setDate(d.getDa
 export const niceDate = iso => iso === today() ? "Today" : iso === shiftDay(today(), -1) ? "Yesterday"
   : parseISO(iso).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
 export const ICON = {
+  chev: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
   today: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3.5"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
   add: '<svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg>',
   foods: '<svg viewBox="0 0 24 24"><path d="M7 3v7M10.5 3v7M7 10c0 1.7 1.5 2.5 1.75 2.5S10.5 11.7 10.5 10M8.75 12.5V21M17 21V3c-2.2 1.2-3.5 3.8-3.5 7.5H17"/></svg>',
