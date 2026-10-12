@@ -64,7 +64,8 @@ function check(step, d) {
   return null;
 }
 
-export function renderOnboarding(app, { existing = null, onFinish, onCancel, onRestore, onSignIn = null }) {
+let unsubAcct = null;
+export function renderOnboarding(app, { existing = null, onFinish, onCancel, onRestore, onSignIn = null, account = null }) {
   const edit = !!existing;
   const flow = edit ? FLOW.filter(s => s !== "welcome") : FLOW;
   const d = fresh(existing);
@@ -149,7 +150,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
     const welcome = step === "welcome";
     app.innerHTML = `<div class="ob">
       ${welcome ? "" : `<div class="obtop"><button class="icb" id="obback" aria-label="Back">${ICON.left}</button><div class="obprog"><i style="width:${Math.round((i) / (flow.length - 1) * 100)}%"></i></div></div>`}
-      ${welcome ? `<div class="obbody">${body(step)}<div class="welcomeacts"><div class="warn" id="oberr"></div>
+      ${welcome ? `<div class="obbody">${body(step)}<div class="welcomeacts"><div class="acctnote" id="obacct" hidden></div><div class="warn" id="oberr"></div>
         <button class="bigbtn" id="obnext">Get started</button>
         ${onSignIn ? '<button class="bigbtn outline" id="obsignin">Sign in with Google</button>' : ""}<button class="linkbtn" id="obrestore">Restore from a backup</button><input type="file" id="obfile" accept="application/json" style="display:none"></div></div>`
       : `<div class="obbody">${body(step)}</div>
@@ -158,6 +159,21 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
         ${edit && i === 0 ? `<button class="linkbtn" id="obcancel">Cancel</button>` : ""}
       </div>`}</div>`;
     wire(step);
+    if (unsubAcct) { unsubAcct(); unsubAcct = null; }
+    if (welcome && account) {
+      const note = $("#obacct"), btn = $("#obsignin");
+      const paint = st => {
+        if (!document.body.contains(note)) return;
+        note.hidden = !st.user && !st.error;
+        if (btn) btn.hidden = !!st.user;
+        note.textContent = st.user
+          ? (st.error ? `Signed in as ${st.user.email}, but syncing failed: ${st.error}`
+            : st.busy || !st.last ? `Signed in as ${st.user.email}. Looking for your saved data…`
+            : `Signed in as ${st.user.email}. No saved data found yet. Set up your profile below and it will be saved to your account.`)
+          : (st.error || "");
+      };
+      paint(account.get()); unsubAcct = account.subscribe(paint);
+    }
     const first = app.querySelector("input:not([type=file])"); if (first && (step === "name" || step === "body")) first.focus({ preventScroll: true });
   }
 
