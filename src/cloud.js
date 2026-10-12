@@ -9,7 +9,7 @@ const LIB = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
 const cap = () => globalThis.Capacitor;
 export const isNative = () => !!(cap() && cap().isNativePlatform && cap().isNativePlatform());
 // Google sign-in needs a normal web address or the Android app. the Windows build (file://) can't do it.
-export const available = () => !!globalThis.PLATE_FAKE_CLOUD || isNative() || location.protocol === "https:";
+export const available = () => !!globalThis.PLATE_FAKE_CLOUD || isNative() || location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname);
 
 let sb = null, lib = null, listeners = new Set(), syncing = null, timer = null;
 let state = { user: null, last: null, error: null, busy: false };
@@ -31,6 +31,7 @@ const real = {
     const { data, error } = await c.auth.signInWithOAuth({ provider: "google", options: { redirectTo: native ? APP_SCHEME : location.origin + location.pathname, skipBrowserRedirect: native } });
     if (error) throw error;
     if (native) {
+      toast("Finish signing in in your browser, then you'll come back here");
       const Browser = cap().registerPlugin ? cap().registerPlugin("Browser") : null;
       try { await Browser.open({ url: data.url }); } catch { location.href = data.url; }
     }
@@ -69,10 +70,29 @@ const real = {
 };
 const backend = () => globalThis.PLATE_FAKE_CLOUD || real;
 
+// Signing in from the Android app happens in the phone's browser. Google/Supabase then send the browser back to the web
+// page with ?code=... If this page was opened that way (the sign-in was started by the app, so this browser doesn't hold
+// the matching secret), pass the code on to the app through its link instead of trying to use it here.
+function relayToApp() {
+  if (isNative() || globalThis.PLATE_FAKE_CLOUD) return false;
+  let hasVerifier = false;
+  try { hasVerifier = !!localStorage.getItem("mt-auth-code-verifier"); } catch {}
+  if (!/[?&]code=/.test(location.search) || hasVerifier || !/Android/i.test(navigator.userAgent)) return false;
+  const link = APP_SCHEME + "?" + location.search.slice(1);
+  document.body.classList.add("onboarding");
+  document.getElementById("app").innerHTML = `<div class="ob"><div class="obbody obhero"><h1>Almost done</h1>
+    <p class="lead">Google sign-in worked. Tap the button to finish in the Macro Tracker app.</p>
+    <div class="welcomeacts"><a class="bigbtn" id="relay" href="${link.replace(/"/g, "&quot;")}" style="text-align:center;text-decoration:none;box-sizing:border-box">Open Macro Tracker</a>
+    <p class="muted">If nothing happens, make sure the Macro Tracker app is installed on this phone.</p></div></div></div>`;
+  setTimeout(() => { location.href = link; }, 400);
+  return true;
+}
+
 // ---- start up: restore a session, listen for the sign-in link on Android ----
 export async function init(onChange) {
   state.onChange = onChange;
   if (!available()) return;
+  if (relayToApp()) return;
   store.onWrite(() => scheduleSync());
   if (isNative() && cap().registerPlugin) {
     try {
