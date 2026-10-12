@@ -3,8 +3,10 @@ import { $, esc, today, isoOf, parseISO, shiftDay, niceDate, ICON, toast } from 
 import { renderOnboarding } from "./onboarding.js";
 import { renderMe, getCheckin, planInput, latestWeight } from "./me.js";
 import { ageFrom, fiberTarget } from "./plan.js";
+import { openCamera } from "./camera.js";
+import { scanBarcode, lookup } from "./barcode.js";
 import * as embed from "./embed.js";
-import { rank, pickDraft, buildExamples, typicalGrams, evaluate, foodGate, GATE_FOOD, GATE_OTHER } from "./learner.js";
+import { rank, pickDraft, unsure, buildExamples, typicalGrams, evaluate, foodGate, GATE_FOOD, GATE_OTHER } from "./learner.js";
 import { MEAL_TYPES, DEFAULT_TARGETS, macrosFor, sumMacros, validateFood, num, buildItems,
   applyActual, dayTotals, nextSplit, stats } from "./logic.js";
 
@@ -122,9 +124,10 @@ function viewToday(app) {
           <div class="row spread"><span class="muted">${esc(time)}</span><b>${Math.round(m.totals.kcal)} kcal</b></div>
           <div>${m.items.map(i => esc(i.food_name) + " " + Math.round(i.grams) + "g").join(" · ")}</div>
           <div class="muted">P ${Math.round(m.totals.protein)} · C ${Math.round(m.totals.carbs)} · F ${Math.round(m.totals.fat)}${m.totals.fiber ? ` · Fibre ${Math.round(m.totals.fiber)}` : ""}${m.actual ? " · numbers you entered" : ""}</div>
-          <button class="danger" data-del="${m.id}">Delete</button></div>`; }).join("")}
+          <div class="row"><button class="act" data-again="${m.id}">Log again</button><button class="danger" data-del="${m.id}">Delete</button></div></div>`; }).join("")}
       </section>`;
     }).join("")}`;
+  app.querySelectorAll("[data-again]").forEach(b => b.onclick = () => logAgain(meals.find(m => m.id === +b.dataset.again)));
   app.querySelectorAll("[data-toggle]").forEach(b => b.onclick = () => {
     const k = b.dataset.toggle; collapsed.has(k) ? collapsed.delete(k) : collapsed.add(k);
     try { localStorage.setItem("mt-collapsed", JSON.stringify([...collapsed])); } catch {}
@@ -206,7 +209,9 @@ async function ensureGate() {
 
 async function buildDraft(blob, emb) {
   const fresh = (await store.all("foods")).filter(x => !x.archived);
-  const picked = pickDraft(rank(emb, fresh, buildExamples(meals)));
+  const ranked = rank(emb, fresh, buildExamples(meals));
+  const picked = pickDraft(ranked);
+  const ask = unsure(ranked);
   const byId = Object.fromEntries(fresh.map(x => [x.id, x]));
   const items = picked.items.map(r => {
     const food = byId[r.food_id], grams = typicalGrams(food, meals);
@@ -214,30 +219,71 @@ async function buildDraft(blob, emb) {
   });
   const more = picked.more.map(r => ({ food_id: r.food_id, prob: r.prob }));
   const pred = sumMacros(items.map(i => macrosFor(byId[i.food_id], i.grams)));
-  draft = { blob, emb, items, more, pred_kcal: pred.kcal, pred_count: items.length };
+  draft = { blob, emb, items, more, pred_kcal: pred.kcal, pred_count: items.length, ask: ask ? { options: ask, chosen: null } : null };
   show();
 }
 
+// ---- log again ----
+function recentMeals(n = 6) {
+  const seen = new Set(), out = [], fm = foodMap();
+  for (const m of [...meals].reverse()) {
+    const items = m.items.filter(i => fm[i.food_id]);
+    if (!items.length) continue;
+    const key = items.map(i => i.food_id).sort().join(",");
+    if (seen.has(key)) continue;
+    seen.add(key); out.push({ m, items });
+    if (out.length >= n) break;
+  }
+  return out;
+}
+function logAgain(m) {
+  const fm = foodMap();
+  const items = m.items.filter(i => fm[i.food_id]).map(i => ({ food_id: i.food_id, grams: i.grams, from_pred: false, pred_grams: null }));
+  if (!items.length) { toast("Those foods were deleted"); return; }
+  mealPick = MEAL_TYPES.includes(m.meal_type) ? m.meal_type : null;
+  draft = { blob: null, emb: null, items, more: [], pred_kcal: null, pred_count: 0, ask: null };
+  tab = "add"; show();
+}
+
 function viewAdd(app) {
+  const recent = recentMeals();
   app.innerHTML = `<h1>Add a meal</h1>
     <p class="muted">Photo from above, whole plate in frame, good light.</p>
     <label class="cam">Take a photo
       <input type="file" accept="image/*" capture="environment" id="file"></label>
     <label class="cam alt">Choose from gallery
       <input type="file" accept="image/*" id="gal"></label>
-    <button class="ghost" id="manual" style="width:100%;margin-top:14px">Log without a photo</button>
-    <div id="busy"></div>`;
+    <button class="ghost" id="scan" style="width:100%;margin-top:14px">Scan a barcode</button>
+    <button class="ghost" id="manual" style="width:100%;margin-top:10px">Log without a photo</button>
+    <div id="busy"></div>
+    ${recent.length ? `<h2>Log again</h2>${recent.map((r, n) => `<div class="card tap" data-again="${n}"><div class="row spread"><b>${esc(r.items.map(i => foodMap()[i.food_id].name.replace(/\s*\(.*?\)/g, "")).slice(0, 3).join(", "))}${r.items.length > 3 ? " +" + (r.items.length - 3) : ""}</b><span class="muted">${Math.round(r.m.totals.kcal)} kcal</span></div>
+      <div class="muted">${esc(MEAL_LABELS[MEAL_TYPES.includes(r.m.meal_type) ? r.m.meal_type : "snack"])} · ${esc(niceDate(r.m.log_date))}</div></div>`).join("")}` : ""}`;
+  app.querySelectorAll("[data-again]").forEach(c => c.onclick = () => logAgain(recent[+c.dataset.again].m));
+  $("#scan").onclick = async () => {
+    const code = await scanBarcode(); if (!code) return;
+    const busy = $("#busy"); busy.innerHTML = '<p class="muted">Looking it up…</p>';
+    try {
+      let food = (await store.all("foods")).find(f => f.barcode === code && !f.archived);
+      if (!food) {
+        const found = await lookup(code);
+        if (!found) { busy.innerHTML = `<div class="card"><b>Not in the database</b><p class="muted">Nobody has added ${esc(code)} yet. You can add it as a food and it will be saved for next time.</p></div>`; return; }
+        const rec = { ...found, source: "barcode", barcode: code, archived: 0 };
+        rec.id = await store.put("foods", rec); food = rec;
+      }
+      mealPick = mealPick || null;
+      draft = { blob: null, emb: null, items: [{ food_id: food.id, grams: Math.round(food.unit_grams || 100), from_pred: false, pred_grams: null }], more: [], pred_kcal: null, pred_count: 0, ask: null };
+      show();
+    } catch (err) { busy.innerHTML = `<p class="warn">${esc(err.message || err)}</p>`; }
+  };
   $("#manual").onclick = () => { draft = { blob: null, emb: null, items: [], more: [], pred_kcal: null, pred_count: 0 }; show(); };
   const handle = e => { const f = e.target.files[0]; if (f) handleFile(f); };
-  // inside the app the web camera input can open the front camera, so use the native camera plugin and ask for the back one
-  const nativeCam = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins && window.Capacitor.Plugins.Camera;
-  if (nativeCam) $("#file").addEventListener("click", async e => {
+  // our own camera screen asks for the back camera; if it can't open (no permission, no camera) the plain file picker is the fallback
+  let viaPicker = false;
+  $("#file").addEventListener("click", async e => {
+    if (viaPicker) { viaPicker = false; return; }
     e.preventDefault();
-    try {
-      const r = await nativeCam.getPhoto({ source: "CAMERA", direction: "REAR", resultType: "dataUrl", quality: 90, correctOrientation: true });
-      const blob = await (await fetch(r.dataUrl)).blob();
-      handleFile(new File([blob], "photo.jpg", { type: blob.type || "image/jpeg" }));
-    } catch (err) { if (!/cancel/i.test(String(err && (err.message || err)))) toast("Couldn't open the camera"); }
+    try { const f = await openCamera(); if (f) handleFile(f); }
+    catch (err) { if (err && err.name === "NotAllowedError") toast("Camera permission is off, using the picker"); viaPicker = true; $("#file").click(); }
   });
   const handleFile = async f => {
     const busy = $("#busy");
@@ -264,7 +310,7 @@ function viewAdd(app) {
     } catch (err) {
       say(`<p class="warn">${esc(err.message || err)}. If this is the first run, check your internet connection and try again.</p>`);
     }
-    e.target.value = "";
+    $("#file").value = ""; $("#gal").value = "";
   };
   $("#file").onchange = handle;
   $("#gal").onchange = handle;
@@ -289,6 +335,9 @@ function viewReview(app) {
         <div class="row" style="margin-top:6px"><input type="number" inputmode="decimal" min="1" value="${it.grams}" data-g="${n}" style="width:110px"><span class="muted">grams${f.unit_name && f.unit_grams ? ` (1 ${esc(f.unit_name)} ≈ ${f.unit_grams}g)` : ""}</span></div>
       </div>`; }).join("")}
       <button class="ghost" id="addfood" style="margin-top:8px;width:100%">+ Add food</button></div>
+    ${d.ask && d.items.length ? `<div class="card ask"><b>Not sure about this one</b>
+      <div class="muted">Which looks closest? Your answer helps the app learn.</div>
+      <div style="margin-top:8px">${d.ask.options.map(id => `<span class="chip${d.ask.chosen === id ? " on" : ""}" data-ask="${id}">${esc(fm[id]?.name || "")}</span>`).join("")}<span class="chip${d.ask.chosen === 0 ? " on" : ""}" data-ask="0">None of these</span></div></div>` : ""}
     ${d.more.length ? `<div class="muted">Other guesses:</div>${d.more.map((s, n) => `<span class="chip" data-more="${n}">+ ${esc(fm[s.food_id]?.name || "")}</span>`).join("")}` : ""}
     <div class="card"><div class="row spread"><b id="tk">${Math.round(t.kcal)} kcal</b>
       <span class="muted" id="tm">P ${Math.round(t.protein)} · C ${Math.round(t.carbs)} · F ${Math.round(t.fat)}</span></div>
@@ -308,6 +357,11 @@ function viewReview(app) {
   app.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { d.items.splice(+b.dataset.rm, 1); show(); });
   const addItem = f => { d.items.push({ food_id: f.id, grams: typicalGrams(f, meals), from_pred: false, pred_grams: null }); show(); };
   $("#addfood").onclick = () => openPicker(addItem);
+  app.querySelectorAll("[data-ask]").forEach(c => c.onclick = () => {
+    const id = +c.dataset.ask; d.ask.chosen = id;
+    if (id) { const f = fm[id], first = d.items[0]; if (first && first.food_id !== id) { d.items[0] = { food_id: id, grams: typicalGrams(f, meals), from_pred: false, pred_grams: null }; } }
+    show();
+  });
   app.querySelectorAll("[data-more]").forEach(c => c.onclick = () => {
     const s = d.more[+c.dataset.more]; d.more.splice(+c.dataset.more, 1); addItem(fm[s.food_id]);
   });
@@ -322,7 +376,7 @@ function viewReview(app) {
         log_date: date, created_at: new Date().toISOString(), meal_type: $("#mt").value,
         photo: d.blob, emb: d.emb, split: d.emb ? nextSplit(meals) : null,
         pred_kcal: d.pred_kcal, pred_count: d.pred_count, items, totals, actual,
-        engine: d.emb ? "clip" : "manual",
+        engine: d.emb ? "clip" : "manual", asked: d.ask && d.ask.chosen !== null ? { options: d.ask.options, chosen: d.ask.chosen } : null,
       });
       draft = null; mealPick = null; tab = "today"; toast("Saved"); show();
     } catch (e) { toast(e.message); $("#save").disabled = false; }
@@ -401,7 +455,7 @@ function openFoodInfo(food, { onEdit, onDelete }) {
       <div><span class="muted">${uses.length ? "Your usual portion" : "Starting portion"} (${typical} g)</span><b>${at(typical)}</b></div>
       <div><span class="muted">Logged</span><b>${uses.length ? `${uses.length} time${uses.length === 1 ? "" : "s"}, last ${esc(niceDate(last))}` : "Not yet"}</b></div>
     </div>
-    <p class="note">${food.source === "seed" ? "A starting value from a general table, so check it against your packet or IFCT and edit it if it's off." : "You added this food."}</p>
+    <p class="note">${food.source === "seed" ? "A starting value from a general table, so check it against your packet or IFCT and edit it if it's off." : food.source === "barcode" ? "From Open Food Facts, a community database. Check it against the packet." : "You added this food."}</p>
     <div class="row" style="margin-top:10px"><button id="fi-e" class="ghost" style="flex:1">Edit</button><button id="fi-d" class="ghost danger" style="flex:1">Delete</button></div></div>`;
   document.body.appendChild(sheet);
   const close = () => sheet.remove();

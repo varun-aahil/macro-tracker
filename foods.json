@@ -570,5 +570,1227 @@
   "unit_name": "can",
   "unit_grams": 330,
   "fiber": 0
+ },
+ {
+  "name": "Orange",
+  "kcal": 47,
+  "protein": 0.9,
+  "carbs": 11.8,
+  "fat": 0.1,
+  "fiber": 2.4,
+  "unit_name": "orange",
+  "unit_grams": 130,
+  "prompt": "a photo of orange"
+ },
+ {
+  "name": "Grapes",
+  "kcal": 69,
+  "protein": 0.7,
+  "carbs": 18,
+  "fat": 0.2,
+  "fiber": 0.9,
+  "unit_name": "cup",
+  "unit_grams": 150,
+  "prompt": "a photo of grapes"
+ },
+ {
+  "name": "Watermelon",
+  "kcal": 30,
+  "protein": 0.6,
+  "carbs": 7.6,
+  "fat": 0.2,
+  "fiber": 0.4,
+  "unit_name": "slice",
+  "unit_grams": 280,
+  "prompt": "a photo of watermelon"
+ },
+ {
+  "name": "Papaya",
+  "kcal": 43,
+  "protein": 0.5,
+  "carbs": 11,
+  "fat": 0.3,
+  "fiber": 1.7,
+  "unit_name": "bowl",
+  "unit_grams": 150,
+  "prompt": "a photo of papaya"
+ },
+ {
+  "name": "Pineapple",
+  "kcal": 50,
+  "protein": 0.5,
+  "carbs": 13,
+  "fat": 0.1,
+  "fiber": 1.4,
+  "unit_name": "slice",
+  "unit_grams": 80,
+  "prompt": "a photo of pineapple"
+ },
+ {
+  "name": "Guava",
+  "kcal": 68,
+  "protein": 2.6,
+  "carbs": 14,
+  "fat": 1,
+  "fiber": 5.4,
+  "unit_name": "guava",
+  "unit_grams": 100,
+  "prompt": "a photo of guava"
+ },
+ {
+  "name": "Pomegranate",
+  "kcal": 83,
+  "protein": 1.7,
+  "carbs": 19,
+  "fat": 1.2,
+  "fiber": 4,
+  "unit_name": "cup",
+  "unit_grams": 170,
+  "prompt": "a photo of pomegranate"
+ },
+ {
+  "name": "Pear",
+  "kcal": 57,
+  "protein": 0.4,
+  "carbs": 15,
+  "fat": 0.1,
+  "fiber": 3.1,
+  "unit_name": "pear",
+  "unit_grams": 180,
+  "prompt": "a photo of pear"
+ },
+ {
+  "name": "Strawberries",
+  "kcal": 32,
+  "protein": 0.7,
+  "carbs": 7.7,
+  "fat": 0.3,
+  "fiber": 2,
+  "unit_name": "cup",
+  "unit_grams": 150,
+  "prompt": "a photo of strawberries"
+ },
+ {
+  "name": "Kiwi",
+  "kcal": 61,
+  "protein": 1.1,
+  "carbs": 15,
+  "fat": 0.5,
+  "fiber": 3,
+  "unit_name": "kiwi",
+  "unit_grams": 75,
+  "prompt": "a photo of kiwi"
+ },
+ {
+  "name": "Chikoo (sapota)",
+  "kcal": 83,
+  "protein": 0.4,
+  "carbs": 20,
+  "fat": 1.1,
+  "fiber": 5.3,
+  "unit_name": "chikoo",
+  "unit_grams": 100,
+  "prompt": "a photo of chikoo"
+ },
+ {
+  "name": "Muskmelon",
+  "kcal": 34,
+  "protein": 0.8,
+  "carbs": 8.2,
+  "fat": 0.2,
+  "fiber": 0.9,
+  "unit_name": "cup",
+  "unit_grams": 160,
+  "prompt": "a photo of muskmelon"
+ },
+ {
+  "name": "Litchi",
+  "kcal": 66,
+  "protein": 0.8,
+  "carbs": 17,
+  "fat": 0.4,
+  "fiber": 1.3,
+  "unit_name": "litchi",
+  "unit_grams": 10,
+  "prompt": "a photo of litchi"
+ },
+ {
+  "name": "Avocado",
+  "kcal": 160,
+  "protein": 2,
+  "carbs": 9,
+  "fat": 15,
+  "fiber": 6.7,
+  "unit_name": "avocado",
+  "unit_grams": 150,
+  "prompt": "a photo of avocado"
+ },
+ {
+  "name": "Dates, dried",
+  "kcal": 282,
+  "protein": 2.5,
+  "carbs": 75,
+  "fat": 0.4,
+  "fiber": 8,
+  "unit_name": "date",
+  "unit_grams": 8
+ },
+ {
+  "name": "Raisins",
+  "kcal": 299,
+  "protein": 3.1,
+  "carbs": 79,
+  "fat": 0.5,
+  "fiber": 3.7,
+  "unit_name": "handful",
+  "unit_grams": 30
+ },
+ {
+  "name": "Cashews",
+  "kcal": 553,
+  "protein": 18,
+  "carbs": 30,
+  "fat": 44,
+  "fiber": 3.3,
+  "unit_name": "handful",
+  "unit_grams": 30
+ },
+ {
+  "name": "Walnuts",
+  "kcal": 654,
+  "protein": 15,
+  "carbs": 14,
+  "fat": 65,
+  "fiber": 6.7,
+  "unit_name": "handful",
+  "unit_grams": 30
+ },
+ {
+  "name": "Pistachios",
+  "kcal": 560,
+  "protein": 20,
+  "carbs": 28,
+  "fat": 45,
+  "fiber": 10,
+  "unit_name": "handful",
+  "unit_grams": 30
+ },
+ {
+  "name": "Coconut, fresh",
+  "kcal": 354,
+  "protein": 3.3,
+  "carbs": 15,
+  "fat": 33,
+  "fiber": 9
+ },
+ {
+  "name": "Tender coconut water",
+  "kcal": 19,
+  "protein": 0.7,
+  "carbs": 3.7,
+  "fat": 0.2,
+  "fiber": 1.1,
+  "unit_name": "glass",
+  "unit_grams": 250,
+  "prompt": "a photo of a glass or cup of tender coconut water"
+ },
+ {
+  "name": "Aloo gobi",
+  "kcal": 95,
+  "protein": 2.5,
+  "carbs": 10,
+  "fat": 5,
+  "fiber": 2.5
+ },
+ {
+  "name": "Bhindi masala",
+  "kcal": 90,
+  "protein": 2.2,
+  "carbs": 8,
+  "fat": 5.5,
+  "fiber": 3.2
+ },
+ {
+  "name": "Baingan bharta",
+  "kcal": 85,
+  "protein": 2,
+  "carbs": 8,
+  "fat": 5,
+  "fiber": 3
+ },
+ {
+  "name": "Aloo matar",
+  "kcal": 100,
+  "protein": 3,
+  "carbs": 13,
+  "fat": 4,
+  "fiber": 3
+ },
+ {
+  "name": "Matar paneer",
+  "kcal": 150,
+  "protein": 7,
+  "carbs": 7,
+  "fat": 10,
+  "fiber": 2
+ },
+ {
+  "name": "Kadai paneer",
+  "kcal": 170,
+  "protein": 9,
+  "carbs": 6,
+  "fat": 12,
+  "fiber": 1.5
+ },
+ {
+  "name": "Paneer tikka",
+  "kcal": 220,
+  "protein": 14,
+  "carbs": 6,
+  "fat": 15,
+  "fiber": 1,
+  "unit_name": "piece",
+  "unit_grams": 30
+ },
+ {
+  "name": "Dal makhani",
+  "kcal": 135,
+  "protein": 5.5,
+  "carbs": 12,
+  "fat": 7,
+  "fiber": 3.5
+ },
+ {
+  "name": "Moong dal, cooked",
+  "kcal": 105,
+  "protein": 7,
+  "carbs": 16,
+  "fat": 1.5,
+  "fiber": 3
+ },
+ {
+  "name": "Masoor dal, cooked",
+  "kcal": 116,
+  "protein": 9,
+  "carbs": 20,
+  "fat": 0.4,
+  "fiber": 4
+ },
+ {
+  "name": "Kadhi",
+  "kcal": 85,
+  "protein": 3,
+  "carbs": 8,
+  "fat": 4.5,
+  "fiber": 0.5
+ },
+ {
+  "name": "Jeera rice",
+  "kcal": 150,
+  "protein": 3,
+  "carbs": 28,
+  "fat": 3,
+  "fiber": 0.8
+ },
+ {
+  "name": "Veg pulao",
+  "kcal": 140,
+  "protein": 3,
+  "carbs": 24,
+  "fat": 3.5,
+  "fiber": 1.5
+ },
+ {
+  "name": "Veg biryani",
+  "kcal": 150,
+  "protein": 3.5,
+  "carbs": 24,
+  "fat": 4.5,
+  "fiber": 1.5
+ },
+ {
+  "name": "Khichdi",
+  "kcal": 110,
+  "protein": 4,
+  "carbs": 18,
+  "fat": 2.5,
+  "fiber": 1.5
+ },
+ {
+  "name": "Curd rice",
+  "kcal": 120,
+  "protein": 3.5,
+  "carbs": 19,
+  "fat": 3.5,
+  "fiber": 0.4
+ },
+ {
+  "name": "Lemon rice",
+  "kcal": 150,
+  "protein": 3,
+  "carbs": 27,
+  "fat": 3.5,
+  "fiber": 1
+ },
+ {
+  "name": "Puri",
+  "kcal": 340,
+  "protein": 7,
+  "carbs": 45,
+  "fat": 15,
+  "fiber": 2.5,
+  "unit_name": "puri",
+  "unit_grams": 30
+ },
+ {
+  "name": "Bhatura",
+  "kcal": 300,
+  "protein": 7,
+  "carbs": 42,
+  "fat": 12,
+  "fiber": 1.5,
+  "unit_name": "bhatura",
+  "unit_grams": 80
+ },
+ {
+  "name": "Aloo paratha",
+  "kcal": 230,
+  "protein": 5,
+  "carbs": 32,
+  "fat": 9,
+  "fiber": 2.5,
+  "unit_name": "paratha",
+  "unit_grams": 90
+ },
+ {
+  "name": "Methi thepla",
+  "kcal": 280,
+  "protein": 8,
+  "carbs": 35,
+  "fat": 12,
+  "fiber": 4,
+  "unit_name": "thepla",
+  "unit_grams": 40
+ },
+ {
+  "name": "Dhokla",
+  "kcal": 160,
+  "protein": 6,
+  "carbs": 25,
+  "fat": 4,
+  "fiber": 1.5,
+  "unit_name": "piece",
+  "unit_grams": 40
+ },
+ {
+  "name": "Pav bhaji",
+  "kcal": 150,
+  "protein": 3.5,
+  "carbs": 20,
+  "fat": 6,
+  "fiber": 3
+ },
+ {
+  "name": "Vada pav",
+  "kcal": 250,
+  "protein": 6,
+  "carbs": 35,
+  "fat": 10,
+  "fiber": 2,
+  "unit_name": "vada pav",
+  "unit_grams": 110
+ },
+ {
+  "name": "Medu vada",
+  "kcal": 250,
+  "protein": 8,
+  "carbs": 25,
+  "fat": 13,
+  "fiber": 3,
+  "unit_name": "vada",
+  "unit_grams": 45
+ },
+ {
+  "name": "Masala dosa",
+  "kcal": 190,
+  "protein": 4,
+  "carbs": 28,
+  "fat": 7,
+  "fiber": 2,
+  "unit_name": "dosa",
+  "unit_grams": 150
+ },
+ {
+  "name": "Uttapam",
+  "kcal": 160,
+  "protein": 5,
+  "carbs": 25,
+  "fat": 4.5,
+  "fiber": 1.5,
+  "unit_name": "uttapam",
+  "unit_grams": 100
+ },
+ {
+  "name": "Rava idli",
+  "kcal": 140,
+  "protein": 4,
+  "carbs": 22,
+  "fat": 4,
+  "fiber": 1,
+  "unit_name": "idli",
+  "unit_grams": 60
+ },
+ {
+  "name": "Appam",
+  "kcal": 150,
+  "protein": 2.5,
+  "carbs": 30,
+  "fat": 2,
+  "fiber": 0.8,
+  "unit_name": "appam",
+  "unit_grams": 70
+ },
+ {
+  "name": "Idiyappam",
+  "kcal": 110,
+  "protein": 2.2,
+  "carbs": 24,
+  "fat": 0.5,
+  "fiber": 0.8
+ },
+ {
+  "name": "Pongal",
+  "kcal": 130,
+  "protein": 3.5,
+  "carbs": 20,
+  "fat": 4,
+  "fiber": 1
+ },
+ {
+  "name": "Bisi bele bath",
+  "kcal": 140,
+  "protein": 4,
+  "carbs": 22,
+  "fat": 4,
+  "fiber": 2.5
+ },
+ {
+  "name": "Rasam",
+  "kcal": 25,
+  "protein": 1,
+  "carbs": 4,
+  "fat": 0.7,
+  "fiber": 0.5
+ },
+ {
+  "name": "Coconut chutney",
+  "kcal": 150,
+  "protein": 2,
+  "carbs": 6,
+  "fat": 13,
+  "fiber": 2
+ },
+ {
+  "name": "Pani puri (golgappa)",
+  "kcal": 190,
+  "protein": 3,
+  "carbs": 30,
+  "fat": 6,
+  "fiber": 2,
+  "unit_name": "piece",
+  "unit_grams": 20
+ },
+ {
+  "name": "Bhel puri",
+  "kcal": 150,
+  "protein": 3.5,
+  "carbs": 26,
+  "fat": 4,
+  "fiber": 2.5
+ },
+ {
+  "name": "Aloo tikki",
+  "kcal": 190,
+  "protein": 3,
+  "carbs": 25,
+  "fat": 9,
+  "fiber": 2.5,
+  "unit_name": "tikki",
+  "unit_grams": 60
+ },
+ {
+  "name": "Kachori",
+  "kcal": 380,
+  "protein": 7,
+  "carbs": 40,
+  "fat": 22,
+  "fiber": 3,
+  "unit_name": "kachori",
+  "unit_grams": 60
+ },
+ {
+  "name": "Pakora / bhajiya",
+  "kcal": 290,
+  "protein": 7,
+  "carbs": 25,
+  "fat": 18,
+  "fiber": 3.5,
+  "unit_name": "piece",
+  "unit_grams": 25
+ },
+ {
+  "name": "Instant noodles (Maggi style), prepared",
+  "kcal": 140,
+  "protein": 3,
+  "carbs": 20,
+  "fat": 5,
+  "fiber": 0.8
+ },
+ {
+  "name": "Egg bhurji",
+  "kcal": 160,
+  "protein": 10,
+  "carbs": 3,
+  "fat": 12,
+  "fiber": 0.5
+ },
+ {
+  "name": "Egg, fried",
+  "kcal": 196,
+  "protein": 13.6,
+  "carbs": 0.8,
+  "fat": 15,
+  "fiber": 0,
+  "unit_name": "egg",
+  "unit_grams": 46
+ },
+ {
+  "name": "Veg fried rice",
+  "kcal": 160,
+  "protein": 4,
+  "carbs": 26,
+  "fat": 4.5,
+  "fiber": 1.2
+ },
+ {
+  "name": "Hakka noodles",
+  "kcal": 150,
+  "protein": 4,
+  "carbs": 25,
+  "fat": 3.5,
+  "fiber": 1.2
+ },
+ {
+  "name": "Chicken fried rice",
+  "kcal": 170,
+  "protein": 8,
+  "carbs": 24,
+  "fat": 5,
+  "fiber": 1
+ },
+ {
+  "name": "Chicken 65",
+  "kcal": 270,
+  "protein": 17,
+  "carbs": 10,
+  "fat": 18,
+  "fiber": 0.5,
+  "unit_name": "piece",
+  "unit_grams": 25
+ },
+ {
+  "name": "Chicken tikka",
+  "kcal": 150,
+  "protein": 22,
+  "carbs": 3,
+  "fat": 5,
+  "fiber": 0.5,
+  "unit_name": "piece",
+  "unit_grams": 30
+ },
+ {
+  "name": "Seekh kebab",
+  "kcal": 220,
+  "protein": 17,
+  "carbs": 4,
+  "fat": 15,
+  "fiber": 0.5,
+  "unit_name": "kebab",
+  "unit_grams": 50
+ },
+ {
+  "name": "Mutton curry",
+  "kcal": 180,
+  "protein": 15,
+  "carbs": 4,
+  "fat": 12,
+  "fiber": 1
+ },
+ {
+  "name": "Mutton biryani",
+  "kcal": 180,
+  "protein": 9,
+  "carbs": 22,
+  "fat": 7,
+  "fiber": 1
+ },
+ {
+  "name": "Fish curry",
+  "kcal": 120,
+  "protein": 12,
+  "carbs": 4,
+  "fat": 6,
+  "fiber": 0.8
+ },
+ {
+  "name": "Fish fry",
+  "kcal": 220,
+  "protein": 18,
+  "carbs": 8,
+  "fat": 13,
+  "fiber": 0.5
+ },
+ {
+  "name": "Prawn curry",
+  "kcal": 110,
+  "protein": 12,
+  "carbs": 4,
+  "fat": 5,
+  "fiber": 0.6
+ },
+ {
+  "name": "Grilled fish",
+  "kcal": 140,
+  "protein": 24,
+  "carbs": 0,
+  "fat": 4.5,
+  "fiber": 0
+ },
+ {
+  "name": "Veg sandwich, grilled",
+  "kcal": 200,
+  "protein": 7,
+  "carbs": 28,
+  "fat": 6.5,
+  "fiber": 2.5,
+  "unit_name": "sandwich",
+  "unit_grams": 150
+ },
+ {
+  "name": "Cheese sandwich",
+  "kcal": 290,
+  "protein": 12,
+  "carbs": 28,
+  "fat": 14,
+  "fiber": 1.8,
+  "unit_name": "sandwich",
+  "unit_grams": 130
+ },
+ {
+  "name": "Veg burger",
+  "kcal": 250,
+  "protein": 8,
+  "carbs": 32,
+  "fat": 10,
+  "fiber": 2,
+  "unit_name": "burger",
+  "unit_grams": 180
+ },
+ {
+  "name": "Chicken burger",
+  "kcal": 260,
+  "protein": 13,
+  "carbs": 28,
+  "fat": 10,
+  "fiber": 1.5,
+  "unit_name": "burger",
+  "unit_grams": 200
+ },
+ {
+  "name": "Pizza, cheese",
+  "kcal": 270,
+  "protein": 11,
+  "carbs": 33,
+  "fat": 10,
+  "fiber": 2.3,
+  "unit_name": "slice",
+  "unit_grams": 110
+ },
+ {
+  "name": "Pasta in white sauce",
+  "kcal": 160,
+  "protein": 5.5,
+  "carbs": 20,
+  "fat": 6.5,
+  "fiber": 1.2
+ },
+ {
+  "name": "Cornflakes, dry",
+  "kcal": 357,
+  "protein": 7,
+  "carbs": 84,
+  "fat": 0.4,
+  "fiber": 3.3,
+  "unit_name": "bowl",
+  "unit_grams": 30
+ },
+ {
+  "name": "Muesli",
+  "kcal": 360,
+  "protein": 10,
+  "carbs": 66,
+  "fat": 6,
+  "fiber": 8,
+  "unit_name": "bowl",
+  "unit_grams": 50
+ },
+ {
+  "name": "Oats porridge, cooked with water",
+  "kcal": 70,
+  "protein": 2.5,
+  "carbs": 12,
+  "fat": 1.4,
+  "fiber": 1.7
+ },
+ {
+  "name": "Peanut chikki",
+  "kcal": 480,
+  "protein": 13,
+  "carbs": 55,
+  "fat": 24,
+  "fiber": 3.5,
+  "unit_name": "piece",
+  "unit_grams": 30
+ },
+ {
+  "name": "Gulab jamun",
+  "kcal": 330,
+  "protein": 5,
+  "carbs": 50,
+  "fat": 13,
+  "fiber": 0.5,
+  "unit_name": "piece",
+  "unit_grams": 40
+ },
+ {
+  "name": "Rasgulla",
+  "kcal": 190,
+  "protein": 4,
+  "carbs": 40,
+  "fat": 1.5,
+  "fiber": 0,
+  "unit_name": "piece",
+  "unit_grams": 50
+ },
+ {
+  "name": "Jalebi",
+  "kcal": 380,
+  "protein": 2.5,
+  "carbs": 70,
+  "fat": 10,
+  "fiber": 0.5,
+  "unit_name": "piece",
+  "unit_grams": 30
+ },
+ {
+  "name": "Kheer",
+  "kcal": 130,
+  "protein": 3.5,
+  "carbs": 20,
+  "fat": 4,
+  "fiber": 0.2
+ },
+ {
+  "name": "Suji halwa",
+  "kcal": 280,
+  "protein": 3,
+  "carbs": 40,
+  "fat": 12,
+  "fiber": 1
+ },
+ {
+  "name": "Gajar halwa",
+  "kcal": 190,
+  "protein": 3.5,
+  "carbs": 25,
+  "fat": 9,
+  "fiber": 1.5
+ },
+ {
+  "name": "Besan laddu",
+  "kcal": 450,
+  "protein": 8,
+  "carbs": 52,
+  "fat": 23,
+  "fiber": 2.5,
+  "unit_name": "laddu",
+  "unit_grams": 40
+ },
+ {
+  "name": "Kaju katli",
+  "kcal": 440,
+  "protein": 8,
+  "carbs": 60,
+  "fat": 18,
+  "fiber": 1,
+  "unit_name": "piece",
+  "unit_grams": 20
+ },
+ {
+  "name": "Kulfi",
+  "kcal": 190,
+  "protein": 5,
+  "carbs": 22,
+  "fat": 9,
+  "fiber": 0,
+  "unit_name": "kulfi",
+  "unit_grams": 80
+ },
+ {
+  "name": "Lassi, sweet",
+  "kcal": 85,
+  "protein": 3,
+  "carbs": 13,
+  "fat": 2.5,
+  "fiber": 0,
+  "unit_name": "glass",
+  "unit_grams": 250,
+  "prompt": "a photo of a glass or cup of lassi, sweet"
+ },
+ {
+  "name": "Buttermilk (chaas)",
+  "kcal": 20,
+  "protein": 1.2,
+  "carbs": 2.5,
+  "fat": 0.5,
+  "fiber": 0,
+  "unit_name": "glass",
+  "unit_grams": 250,
+  "prompt": "a photo of a glass or cup of buttermilk"
+ },
+ {
+  "name": "Coffee with milk and sugar",
+  "kcal": 45,
+  "protein": 1.5,
+  "carbs": 6.5,
+  "fat": 1.5,
+  "fiber": 0,
+  "unit_name": "cup",
+  "unit_grams": 150,
+  "prompt": "a photo of a glass or cup of coffee with milk and sugar"
+ },
+ {
+  "name": "Black coffee",
+  "kcal": 2,
+  "protein": 0.1,
+  "carbs": 0,
+  "fat": 0,
+  "fiber": 0,
+  "unit_name": "cup",
+  "unit_grams": 200,
+  "prompt": "a photo of a glass or cup of black coffee"
+ },
+ {
+  "name": "Latte",
+  "kcal": 50,
+  "protein": 3,
+  "carbs": 5,
+  "fat": 2,
+  "fiber": 0,
+  "unit_name": "cup",
+  "unit_grams": 300,
+  "prompt": "a photo of a glass or cup of latte"
+ },
+ {
+  "name": "Orange juice",
+  "kcal": 45,
+  "protein": 0.7,
+  "carbs": 10,
+  "fat": 0.2,
+  "fiber": 0.2,
+  "unit_name": "glass",
+  "unit_grams": 250,
+  "prompt": "a photo of a glass or cup of orange juice"
+ },
+ {
+  "name": "Banana shake",
+  "kcal": 85,
+  "protein": 3,
+  "carbs": 14,
+  "fat": 2,
+  "fiber": 1,
+  "unit_name": "glass",
+  "unit_grams": 300,
+  "prompt": "a photo of a glass or cup of banana shake"
+ },
+ {
+  "name": "Beer",
+  "kcal": 43,
+  "protein": 0.5,
+  "carbs": 3.6,
+  "fat": 0,
+  "fiber": 0,
+  "unit_name": "bottle",
+  "unit_grams": 330,
+  "prompt": "a photo of a glass or cup of beer"
+ },
+ {
+  "name": "Energy drink",
+  "kcal": 45,
+  "protein": 0,
+  "carbs": 11,
+  "fat": 0,
+  "fiber": 0,
+  "unit_name": "can",
+  "unit_grams": 250,
+  "prompt": "a photo of a glass or cup of energy drink"
+ },
+ {
+  "name": "Cucumber",
+  "kcal": 15,
+  "protein": 0.7,
+  "carbs": 3.6,
+  "fat": 0.1,
+  "fiber": 0.5,
+  "unit_name": "cucumber",
+  "unit_grams": 200,
+  "prompt": "a photo of cucumber"
+ },
+ {
+  "name": "Tomato",
+  "kcal": 18,
+  "protein": 0.9,
+  "carbs": 3.9,
+  "fat": 0.2,
+  "fiber": 1.2,
+  "unit_name": "tomato",
+  "unit_grams": 100,
+  "prompt": "a photo of tomato"
+ },
+ {
+  "name": "Carrot",
+  "kcal": 41,
+  "protein": 0.9,
+  "carbs": 10,
+  "fat": 0.2,
+  "fiber": 2.8,
+  "unit_name": "carrot",
+  "unit_grams": 70,
+  "prompt": "a photo of carrot"
+ },
+ {
+  "name": "Onion",
+  "kcal": 40,
+  "protein": 1.1,
+  "carbs": 9,
+  "fat": 0.1,
+  "fiber": 1.7,
+  "unit_name": "onion",
+  "unit_grams": 110,
+  "prompt": "a photo of onion"
+ },
+ {
+  "name": "Spinach, cooked",
+  "kcal": 23,
+  "protein": 3,
+  "carbs": 3.6,
+  "fat": 0.3,
+  "fiber": 2.4
+ },
+ {
+  "name": "Cauliflower, boiled",
+  "kcal": 25,
+  "protein": 2,
+  "carbs": 5,
+  "fat": 0.3,
+  "fiber": 2
+ },
+ {
+  "name": "Cabbage",
+  "kcal": 25,
+  "protein": 1.3,
+  "carbs": 6,
+  "fat": 0.1,
+  "fiber": 2.5,
+  "prompt": "a photo of cabbage"
+ },
+ {
+  "name": "Sweet potato, boiled",
+  "kcal": 90,
+  "protein": 1.6,
+  "carbs": 21,
+  "fat": 0.1,
+  "fiber": 3.3,
+  "unit_name": "sweet potato",
+  "unit_grams": 150
+ },
+ {
+  "name": "Sweet corn, boiled",
+  "kcal": 96,
+  "protein": 3.4,
+  "carbs": 21,
+  "fat": 1.5,
+  "fiber": 2.4,
+  "unit_name": "cob",
+  "unit_grams": 150
+ },
+ {
+  "name": "Mushrooms",
+  "kcal": 22,
+  "protein": 3.1,
+  "carbs": 3.3,
+  "fat": 0.3,
+  "fiber": 1,
+  "prompt": "a photo of mushrooms"
+ },
+ {
+  "name": "Tofu",
+  "kcal": 76,
+  "protein": 8,
+  "carbs": 1.9,
+  "fat": 4.8,
+  "fiber": 0.3
+ },
+ {
+  "name": "Cheese slice",
+  "kcal": 320,
+  "protein": 18,
+  "carbs": 3,
+  "fat": 26,
+  "fiber": 0,
+  "unit_name": "slice",
+  "unit_grams": 20
+ },
+ {
+  "name": "Cheddar cheese",
+  "kcal": 403,
+  "protein": 25,
+  "carbs": 1.3,
+  "fat": 33,
+  "fiber": 0
+ },
+ {
+  "name": "Mozzarella",
+  "kcal": 280,
+  "protein": 28,
+  "carbs": 3,
+  "fat": 17,
+  "fiber": 0
+ },
+ {
+  "name": "Milk, skimmed",
+  "kcal": 35,
+  "protein": 3.4,
+  "carbs": 5,
+  "fat": 0.1,
+  "fiber": 0,
+  "unit_name": "glass",
+  "unit_grams": 250,
+  "prompt": "a photo of a glass or cup of milk, skimmed"
+ },
+ {
+  "name": "Soy milk",
+  "kcal": 33,
+  "protein": 3,
+  "carbs": 1.7,
+  "fat": 1.8,
+  "fiber": 0.4,
+  "unit_name": "glass",
+  "unit_grams": 250,
+  "prompt": "a photo of a glass or cup of soy milk"
+ },
+ {
+  "name": "Hummus",
+  "kcal": 166,
+  "protein": 8,
+  "carbs": 14,
+  "fat": 10,
+  "fiber": 6
+ },
+ {
+  "name": "Chia seeds",
+  "kcal": 486,
+  "protein": 17,
+  "carbs": 42,
+  "fat": 31,
+  "fiber": 34,
+  "unit_name": "tbsp",
+  "unit_grams": 12
+ },
+ {
+  "name": "Flax seeds",
+  "kcal": 534,
+  "protein": 18,
+  "carbs": 29,
+  "fat": 42,
+  "fiber": 27,
+  "unit_name": "tbsp",
+  "unit_grams": 10
+ },
+ {
+  "name": "Sattu (roasted gram flour)",
+  "kcal": 413,
+  "protein": 20,
+  "carbs": 65,
+  "fat": 6,
+  "fiber": 18,
+  "unit_name": "tbsp",
+  "unit_grams": 15
+ },
+ {
+  "name": "Besan (gram flour)",
+  "kcal": 387,
+  "protein": 22,
+  "carbs": 58,
+  "fat": 6.7,
+  "fiber": 11
+ },
+ {
+  "name": "Mayonnaise",
+  "kcal": 680,
+  "protein": 1,
+  "carbs": 0.6,
+  "fat": 75,
+  "fiber": 0,
+  "unit_name": "tbsp",
+  "unit_grams": 14
+ },
+ {
+  "name": "Sugar",
+  "kcal": 387,
+  "protein": 0,
+  "carbs": 100,
+  "fat": 0,
+  "fiber": 0,
+  "unit_name": "tsp",
+  "unit_grams": 4
+ },
+ {
+  "name": "Honey",
+  "kcal": 304,
+  "protein": 0.3,
+  "carbs": 82,
+  "fat": 0,
+  "fiber": 0.2,
+  "unit_name": "tsp",
+  "unit_grams": 7
+ },
+ {
+  "name": "Jaggery",
+  "kcal": 383,
+  "protein": 0.4,
+  "carbs": 98,
+  "fat": 0.1,
+  "fiber": 0,
+  "unit_name": "tsp",
+  "unit_grams": 6
+ },
+ {
+  "name": "Poha, dry",
+  "kcal": 350,
+  "protein": 6.6,
+  "carbs": 77,
+  "fat": 1.2,
+  "fiber": 2
  }
 ]

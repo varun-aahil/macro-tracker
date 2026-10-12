@@ -82,6 +82,14 @@ export function pickDraft(ranked, { maxItems = 4, minProb = 0.12, relative = 0.3
   return { items, more: ranked.filter(r => !used.has(r.food_id)).slice(0, 5) };
 }
 
+// when the top guess is not clearly ahead, the app asks instead of guessing. thresholds are untuned, see bench/.
+export const UNSURE = { minTop: 0.5, minMargin: 0.2 };
+export function unsure(ranked, t = UNSURE) {
+  if (ranked.length < 2) return null;
+  const [a, b] = ranked;
+  return (a.prob < t.minTop || a.prob - b.prob < t.minMargin) ? ranked.slice(0, 3).map(r => r.food_id) : null;
+}
+
 // grams you usually eat of a food, falling back to a unit or 100 g
 export function typicalGrams(food, meals) {
   const seen = [];

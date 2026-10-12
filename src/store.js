@@ -40,20 +40,32 @@ export async function getSetting(key, fallback) {
 }
 export const setSetting = (key, value) => put("settings", value, key);
 
+const ORIGINAL_SEED = 62;   // the first 62 entries of foods.json shipped in the first versions
 export async function seedFoods() {
+  const seed = await (await fetch("foods.json")).json();
   const have = await all("foods");
-  if (have.length) {   // older installs: fill in fibre for the starter foods, never touching edited values
-    const seed = await (await fetch("foods.json")).json(), by = Object.fromEntries(seed.map(f => [f.name, f.fiber]));
-    for (const f of have) if (f.source === "seed" && f.fiber === undefined && by[f.name] !== undefined) await put("foods", { ...f, fiber: by[f.name] });
+  let offered = await get("settings", "seed-offered");
+  if (!have.length) {
+    const db = await open();
+    await new Promise((resolve, reject) => {
+      const t = db.transaction("foods", "readwrite");
+      for (const f of seed) t.objectStore("foods").add({ ...f, source: "seed", archived: 0 });
+      t.oncomplete = resolve; t.onerror = () => reject(t.error);
+    });
+    await setSetting("seed-offered", seed.map(f => f.name));
     return;
   }
-  const seed = await (await fetch("foods.json")).json();
-  const db = await open();
-  await new Promise((resolve, reject) => {
-    const t = db.transaction("foods", "readwrite");
-    for (const f of seed) t.objectStore("foods").add({ ...f, source: "seed", archived: 0 });
-    t.oncomplete = resolve; t.onerror = () => reject(t.error);
-  });
+  // existing install: fill in fibre on starter foods, and add new starter foods once (never re-adding ones you deleted)
+  if (!offered) offered = seed.slice(0, ORIGINAL_SEED).map(f => f.name);
+  const names = new Set(have.map(f => f.name.toLowerCase())), done = new Set(offered);
+  const byName = Object.fromEntries(seed.map(f => [f.name, f]));
+  for (const f of have) if (f.source === "seed" && f.fiber === undefined && byName[f.name]) await put("foods", { ...f, fiber: byName[f.name].fiber });
+  for (const f of seed) {
+    if (done.has(f.name)) continue;
+    done.add(f.name);
+    if (!names.has(f.name.toLowerCase())) await put("foods", { ...f, source: "seed", archived: 0 });
+  }
+  await setSetting("seed-offered", [...done]);
 }
 
 const SETTING_KEYS = ["targets", "profile", "weights", "adapt", "avatar"];

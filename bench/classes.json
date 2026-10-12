@@ -1,0 +1,23 @@
+{
+  "note": "Food-101 label -> the app foods that count as a correct answer. Only dishes that have a fair match in the app's food list are included.",
+  "map": {
+    "chicken_curry": ["Chicken curry (home style)"],
+    "samosa": ["Veg samosa, fried"],
+    "french_fries": ["French fries, fried", "French fries, oven-baked frozen (check label)"],
+    "ice_cream": ["Ice cream, vanilla"],
+    "omelette": ["Omelette"],
+    "pizza": ["Pizza, cheese"],
+    "fried_rice": ["Veg fried rice", "Chicken fried rice"],
+    "club_sandwich": ["Veg sandwich, grilled", "Cheese sandwich"],
+    "grilled_cheese_sandwich": ["Veg sandwich, grilled", "Cheese sandwich"],
+    "spaghetti_bolognese": ["Pasta, cooked", "Pasta in white sauce"],
+    "spaghetti_carbonara": ["Pasta, cooked", "Pasta in white sauce"],
+    "macaroni_and_cheese": ["Pasta in white sauce", "Pasta, cooked"],
+    "greek_salad": ["Salad (cucumber, tomato, onion)"],
+    "caesar_salad": ["Salad (cucumber, tomato, onion)"],
+    "hummus": ["Hummus"],
+    "deviled_eggs": ["Egg, whole, boiled"],
+    "chicken_wings": ["Chicken tikka", "Chicken 65"],
+    "hamburger": ["Chicken burger", "Veg burger"]
+  }
+}

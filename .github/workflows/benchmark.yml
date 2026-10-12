@@ -1,0 +1,20 @@
+# runs the food-guessing benchmark on real images and publishes the table
+name: benchmark
+on: workflow_dispatch
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm init -y && npm i @huggingface/transformers@3.5.1
+      - run: node bench/run.mjs | tee bench/out.txt
+      - run: cat bench/RESULTS.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark
+          path: |
+            bench/RESULTS.md
+            bench/results.json
