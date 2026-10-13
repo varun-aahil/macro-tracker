@@ -63,7 +63,7 @@ async function show() {
     if (gate) {
       const existing = profile ? { profile, age: ageFrom(profile.birthYear), weightKg: latestWeight(weights, 70), targets } : null;
       renderOnboarding(app, {
-        existing, onFinish: finishOnboarding, onSignIn: cloud.available() ? () => cloud.signIn() : null, account: cloud.available() ? { get: cloud.getState, subscribe: cloud.subscribe } : null,
+        existing, onFinish: finishOnboarding, onSignIn: cloud.available() ? () => cloud.signIn() : null, account: cloud.available() ? { get: cloud.getState, subscribe: cloud.subscribe, log: cloud.getLog } : null,
         onCancel: () => { editing = false; show(); },
         onRestore: async file => {
           try { await store.importAll(await file.text()); show(); } catch (err) { toast(err.message || "That backup didn't work"); }

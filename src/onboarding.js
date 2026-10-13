@@ -164,7 +164,8 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
       const note = $("#obacct"), btn = $("#obsignin");
       const paint = st => {
         if (!document.body.contains(note)) return;
-        note.hidden = !st.user && !st.error;
+        const trail = account.log ? account.log() : [];
+        note.hidden = !st.user && !st.error && !trail.length;
         if (btn) btn.hidden = !!st.user;
         const first = st.user && (st.user.name || "").trim().split(/\s+/)[0];
         if (st.user && st.last && !st.busy && !st.error && !autoAdvanced && !edit) {
@@ -178,7 +179,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
           ? (st.error ? `Signed in as ${st.user.email}, but syncing failed: ${st.error}`
             : st.busy || !st.last ? `Signed in as ${st.user.email}. Looking for your saved data…`
             : `Signed in as ${st.user.email}. Setting things up…`)
-          : (st.error || "");
+          : (st.error || "") + (trail.length ? (st.error ? "\n" : "") + "Sign-in log: " + trail.slice(-4).join(" › ") : "");
       };
       paint(account.get()); unsubAcct = account.subscribe(paint);
     }

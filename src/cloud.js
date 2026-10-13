@@ -11,6 +11,12 @@ export const isNative = () => !!(cap() && cap().isNativePlatform && cap().isNati
 // Google sign-in needs a normal web address or the Android app. the Windows build (file://) can't do it.
 export const available = () => !!globalThis.PLATE_FAKE_CLOUD || isNative() || location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname);
 
+// a short trail of what the sign-in did, shown on screen so a failure is never silent
+const logKey = "mt-signin-log";
+export const getLog = () => { try { return JSON.parse(localStorage.getItem(logKey) || "[]"); } catch { return []; } };
+const log = msg => { try { const l = getLog(); l.push(new Date().toTimeString().slice(0, 8) + " " + msg); localStorage.setItem(logKey, JSON.stringify(l.slice(-12))); } catch {} try { listeners.forEach(f => f(state)); } catch {} };
+export const clearLog = () => { try { localStorage.removeItem(logKey); } catch {} };
+
 let sb = null, lib = null, listeners = new Set(), syncing = null, timer = null;
 let state = { user: null, last: null, error: null, busy: false };
 export const getState = () => state;
@@ -30,6 +36,8 @@ const real = {
     const c = await client(), native = isNative();
     const { data, error } = await c.auth.signInWithOAuth({ provider: "google", options: { redirectTo: native ? APP_SCHEME : location.origin + location.pathname, skipBrowserRedirect: native } });
     if (error) throw error;
+    let v = false; try { v = !!localStorage.getItem("mt-auth-code-verifier"); } catch {}
+    log("started; secret saved: " + v);
     if (native) {
       toast("Finish signing in in your browser, then you'll come back here");
       const Browser = cap().registerPlugin ? cap().registerPlugin("Browser") : null;
@@ -39,11 +47,25 @@ const real = {
   async finish(url) {   // the app was reopened by the sign-in link
     const u = new URL(url), code = u.searchParams.get("code"), hash = new URLSearchParams(u.hash.slice(1));
     const err = u.searchParams.get("error_description") || hash.get("error_description");
+    log("link opened: " + (code ? "has code" : hash.get("access_token") ? "has token" : err ? "error" : "no code"));
     if (err) throw new Error(err);
     const c = await client();
-    if (code) { const { error } = await c.auth.exchangeCodeForSession(code); if (error) throw error; }
+    if (code) {
+      let { error } = await c.auth.exchangeCodeForSession(code);
+      if (error) {   // try the plain web call with the saved secret
+        let ver = ""; try { ver = localStorage.getItem("mt-auth-code-verifier") || ""; } catch {}
+        log("exchange failed: " + error.message + "; secret present: " + !!ver);
+        if (!ver) throw error;
+        const r = await fetch(SUPABASE_URL + "/auth/v1/token?grant_type=pkce", { method: "POST", headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ auth_code: code, code_verifier: ver.split("/")[0] }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.access_token) throw new Error(j.error_description || j.msg || j.message || "Sign-in failed (" + r.status + ")");
+        const { error: e2 } = await c.auth.setSession({ access_token: j.access_token, refresh_token: j.refresh_token });
+        if (e2) throw e2;
+      }
+    }
     else if (hash.get("access_token") && hash.get("refresh_token")) { const { error } = await c.auth.setSession({ access_token: hash.get("access_token"), refresh_token: hash.get("refresh_token") }); if (error) throw error; }
     else throw new Error("The sign-in link came back without a code. Check the Redirect URLs in Supabase.");
+    log("signed in");
     try { await cap().registerPlugin("Browser").close(); } catch {}
   },
   async signOut() { await (await client()).auth.signOut(); },
@@ -97,12 +119,15 @@ export async function init(onChange) {
   if (isNative() && cap().registerPlugin) {
     try {
       const App = cap().registerPlugin("App"), scheme = APP_SCHEME.split("://")[0] + "://";
+      let lastUrl = "";
       const handle = async url => {
-        if (!url || !url.startsWith(scheme)) return;
-        try { await backend().finish(url); await refreshUser(); if (state.user) { toast("Signed in"); await sync(); } } catch (e) { emit({ error: e.message || String(e) }); }
+        if (!url || !url.startsWith(scheme) || url === lastUrl) return;
+        lastUrl = url;
+        try { await backend().finish(url); await refreshUser(); if (state.user) { toast("Signed in"); await sync(); } else throw new Error("Signed in, but no session was saved on this phone."); } catch (e) { log("failed: " + (e.message || e)); emit({ error: e.message || String(e) }); }
       };
-      App.addListener("appUrlOpen", ({ url }) => handle(url));
-      try { const l = await App.getLaunchUrl(); if (l && l.url) handle(l.url); } catch {}   // app was started by the sign-in link
+      App.addListener("appUrlOpen", ({ url }) => { log("app got link"); handle(url); });
+      App.addListener("appStateChange", async ({ isActive }) => { if (isActive) { try { const l = await App.getLaunchUrl(); if (l && l.url) handle(l.url); } catch {} if (!state.user) { let has = false; try { has = !!localStorage.getItem("mt-auth"); } catch {} if (has) { await refreshUser(); if (state.user) sync(); } } } });
+      try { const l = await App.getLaunchUrl(); if (l && l.url) { log("app started by link"); handle(l.url); } } catch {}   // app was started by the sign-in link
     } catch (e) { emit({ error: "Sign-in link handling isn't available: " + (e.message || e) }); }
   }
   let hasSession = false;
@@ -115,7 +140,7 @@ async function refreshUser() {
   if (state.user && /[?&]code=/.test(location.search)) history.replaceState(null, "", location.pathname);
 }
 
-export async function signIn() { emit({ error: null }); try { await backend().signIn(); } catch (e) { emit({ error: e.message || String(e) }); } }
+export async function signIn() { clearLog(); emit({ error: null }); try { await backend().signIn(); } catch (e) { emit({ error: e.message || String(e) }); } }
 export async function signOut() { await backend().signOut(); emit({ user: null, last: null }); }
 export async function deleteCloudData() {
   if (!state.user) return;
