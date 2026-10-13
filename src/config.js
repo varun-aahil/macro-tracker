@@ -3,3 +3,6 @@
 export const SUPABASE_URL = "https://idpfukzvvypnwxxwdalz.supabase.co";
 export const SUPABASE_KEY = "sb_publishable_TcFR1bCgLX-HNkmL5Wm4mA_an31eQsY";
 export const APP_SCHEME = "com.varunaahil.macrotracker://login";
+
+// the web address Google/Supabase send the phone browser back to; it hands the sign-in over to the app with a button tap
+export const WEB_URL = "https://varun-aahil.github.io/macro-tracker/";

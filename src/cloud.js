@@ -2,7 +2,7 @@
 // local first: the app works fully offline, and sync is a background extra. photos are never uploaded.
 import * as store from "./store.js";
 import { toast } from "./ui.js";
-import { SUPABASE_URL, SUPABASE_KEY, APP_SCHEME } from "./config.js";
+import { SUPABASE_URL, SUPABASE_KEY, APP_SCHEME, WEB_URL } from "./config.js";
 import { plan, foodRow, mealRow, settingRow, mealFromRow } from "./sync.js";
 
 const LIB = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
@@ -34,9 +34,10 @@ const real = {
   async user() { const { data } = await (await client()).auth.getSession(); const u = data.session && data.session.user; return u ? { id: u.id, email: u.email, name: (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || "" } : null; },
   async signIn() {
     const c = await client(), native = isNative();
-    const { data, error } = await c.auth.signInWithOAuth({ provider: "google", options: { redirectTo: native ? APP_SCHEME : location.origin + location.pathname, skipBrowserRedirect: native } });
+    const { data, error } = await c.auth.signInWithOAuth({ provider: "google", options: { redirectTo: native ? WEB_URL : location.origin + location.pathname, skipBrowserRedirect: native } });
     if (error) throw error;
     let v = false; try { v = !!localStorage.getItem("mt-auth-code-verifier"); } catch {}
+    if (!native) { try { sessionStorage.setItem("mt-web-flow", "1"); } catch {} }
     log("started; secret saved: " + v);
     if (native) {
       toast("Finish signing in in your browser, then you'll come back here");
@@ -97,16 +98,15 @@ const backend = () => globalThis.PLATE_FAKE_CLOUD || real;
 // the matching secret), pass the code on to the app through its link instead of trying to use it here.
 function relayToApp() {
   if (isNative() || globalThis.PLATE_FAKE_CLOUD) return false;
-  let hasVerifier = false;
-  try { hasVerifier = !!localStorage.getItem("mt-auth-code-verifier"); } catch {}
-  if (!/[?&]code=/.test(location.search) || hasVerifier || !/Android/i.test(navigator.userAgent)) return false;
+  let web = false;
+  try { web = !!sessionStorage.getItem("mt-web-flow"); } catch {}
+  if (!/[?&]code=/.test(location.search) || web || !/Android/i.test(navigator.userAgent)) return false;
   const link = APP_SCHEME + "?" + location.search.slice(1);
   document.body.classList.add("onboarding");
   document.getElementById("app").innerHTML = `<div class="ob"><div class="obbody obhero"><h1>Almost done</h1>
     <p class="lead">Google sign-in worked. Tap the button to finish in the Macro Tracker app.</p>
     <div class="welcomeacts"><a class="bigbtn" id="relay" href="${link.replace(/"/g, "&quot;")}" style="text-align:center;text-decoration:none;box-sizing:border-box">Open Macro Tracker</a>
     <p class="muted">If nothing happens, make sure the Macro Tracker app is installed on this phone.</p></div></div></div>`;
-  setTimeout(() => { location.href = link; }, 400);
   return true;
 }
 
@@ -118,7 +118,8 @@ export async function init(onChange) {
   store.onWrite(() => scheduleSync());
   if (isNative() && cap().registerPlugin) {
     try {
-      const App = cap().registerPlugin("App"), scheme = APP_SCHEME.split("://")[0] + "://";
+      const App = (cap().Plugins && cap().Plugins.App) || cap().registerPlugin("App"), scheme = APP_SCHEME.split("://")[0] + "://";
+      log("listening for the sign-in link");
       let lastUrl = "";
       const handle = async url => {
         if (!url || !url.startsWith(scheme) || url === lastUrl) return;
