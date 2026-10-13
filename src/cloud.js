@@ -2,7 +2,7 @@
 // local first: the app works fully offline, and sync is a background extra. photos are never uploaded.
 import * as store from "./store.js";
 import { toast } from "./ui.js";
-import { SUPABASE_URL, SUPABASE_KEY, APP_SCHEME, WEB_URL } from "./config.js";
+import { SUPABASE_URL, SUPABASE_KEY, APP_SCHEME, WEB_URL, GOOGLE_WEB_CLIENT_ID } from "./config.js";
 import { plan, foodRow, mealRow, settingRow, mealFromRow } from "./sync.js";
 
 const LIB = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
@@ -32,7 +32,23 @@ async function client() {
 
 const real = {
   async user() { const { data } = await (await client()).auth.getSession(); const u = data.session && data.session.user; return u ? { id: u.id, email: u.email, name: (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || "" } : null; },
+  async nativeGoogle() {   // Android's own account picker: no browser, no link hand-off
+    const SL = (cap().Plugins && cap().Plugins.SocialLogin) || cap().registerPlugin("SocialLogin");
+    log("native picker: opening");
+    await SL.initialize({ google: { webClientId: GOOGLE_WEB_CLIENT_ID } });
+    const res = await SL.login({ provider: "google", options: {} });
+    const token = res && res.result && res.result.idToken;
+    if (!token) throw new Error("Google didn't return an ID token.");
+    const { error } = await (await client()).auth.signInWithIdToken({ provider: "google", token });
+    if (error) throw error;
+    log("native picker: signed in");
+    return "done";
+  },
   async signIn() {
+    if (isNative() && GOOGLE_WEB_CLIENT_ID) {
+      try { return await this.nativeGoogle(); }
+      catch (e) { const m = String((e && e.message) || e); log("native picker failed: " + m); if (/cancel/i.test(m)) throw new Error("Sign-in cancelled."); /* otherwise fall through to the browser way */ }
+    }
     const c = await client(), native = isNative();
     const { data, error } = await c.auth.signInWithOAuth({ provider: "google", options: { redirectTo: native ? WEB_URL : location.origin + location.pathname, skipBrowserRedirect: native } });
     if (error) throw error;
@@ -69,6 +85,8 @@ const real = {
     log("signed in");
     try { await cap().registerPlugin("Browser").close(); } catch {}
   },
+  async sendCode(email) { const { error } = await (await client()).auth.signInWithOtp({ email, options: { shouldCreateUser: true } }); if (error) throw error; },
+  async verifyCode(email, token) { const { error } = await (await client()).auth.verifyOtp({ email, token, type: "email" }); if (error) throw error; },
   async signOut() { await (await client()).auth.signOut(); },
   async pull(since) {
     const c = await client(), out = [];
@@ -106,7 +124,11 @@ function relayToApp() {
   document.getElementById("app").innerHTML = `<div class="ob"><div class="obbody obhero"><h1>Almost done</h1>
     <p class="lead">Google sign-in worked. Tap the button to finish in the Macro Tracker app.</p>
     <div class="welcomeacts"><a class="bigbtn" id="relay" href="${link.replace(/"/g, "&quot;")}" style="text-align:center;text-decoration:none;box-sizing:border-box">Open Macro Tracker</a>
-    <p class="muted">If nothing happens, make sure the Macro Tracker app is installed on this phone.</p></div></div></div>`;
+    <p class="muted">If the app opens but isn't signed in, copy this code, then in the app tap "Paste sign-in code":</p>
+    <textarea id="relaycode" readonly rows="3" style="width:100%;box-sizing:border-box">${(new URLSearchParams(location.search).get("code") || "").replace(/[<>"&]/g, "")}</textarea>
+    <button class="bigbtn outline" id="relaycopy">Copy code</button></div></div></div>`;
+  const cp = document.getElementById("relaycopy");
+  if (cp) cp.onclick = async () => { const t = document.getElementById("relaycode"); try { await navigator.clipboard.writeText(t.value); cp.textContent = "Copied"; } catch { t.select(); document.execCommand("copy"); cp.textContent = "Copied"; } };
   return true;
 }
 
@@ -119,7 +141,8 @@ export async function init(onChange) {
   if (isNative() && cap().registerPlugin) {
     try {
       const App = (cap().Plugins && cap().Plugins.App) || cap().registerPlugin("App"), scheme = APP_SCHEME.split("://")[0] + "://";
-      log("listening for the sign-in link");
+      const reg = []; try { reg.push("Plugins.App=" + typeof (cap().Plugins && cap().Plugins.App)); } catch {}
+      log("boot; " + reg.join(" ") + "; listening");
       let lastUrl = "";
       const handle = async url => {
         if (!url || !url.startsWith(scheme) || url === lastUrl) return;
@@ -127,7 +150,7 @@ export async function init(onChange) {
         try { await backend().finish(url); await refreshUser(); if (state.user) { toast("Signed in"); await sync(); } else throw new Error("Signed in, but no session was saved on this phone."); } catch (e) { log("failed: " + (e.message || e)); emit({ error: e.message || String(e) }); }
       };
       App.addListener("appUrlOpen", ({ url }) => { log("app got link"); handle(url); });
-      App.addListener("appStateChange", async ({ isActive }) => { if (isActive) { try { const l = await App.getLaunchUrl(); if (l && l.url) handle(l.url); } catch {} if (!state.user) { let has = false; try { has = !!localStorage.getItem("mt-auth"); } catch {} if (has) { await refreshUser(); if (state.user) sync(); } } } });
+      App.addListener("appStateChange", async ({ isActive }) => { log(isActive ? "app resumed" : "app paused"); if (isActive) { try { const l = await App.getLaunchUrl(); if (l && l.url) handle(l.url); } catch {} if (!state.user) { let has = false; try { has = !!localStorage.getItem("mt-auth"); } catch {} if (has) { await refreshUser(); if (state.user) sync(); } } } });
       try { const l = await App.getLaunchUrl(); if (l && l.url) { log("app started by link"); handle(l.url); } } catch {}   // app was started by the sign-in link
     } catch (e) { emit({ error: "Sign-in link handling isn't available: " + (e.message || e) }); }
   }
@@ -141,7 +164,21 @@ async function refreshUser() {
   if (state.user && /[?&]code=/.test(location.search)) history.replaceState(null, "", location.pathname);
 }
 
-export async function signIn() { clearLog(); emit({ error: null }); try { await backend().signIn(); } catch (e) { emit({ error: e.message || String(e) }); } }
+export async function signIn() { emit({ error: null }); try { const r = await backend().signIn(); if (r === "done") { await refreshUser(); if (!state.user) throw new Error("Signed in, but no session was saved."); toast("Signed in"); sync(); } } catch (e) { emit({ error: e.message || String(e) }); } }
+// sign in with a code sent by email: everything happens inside the app, no browser trip
+export async function sendCode(email) { log("code requested"); await backend().sendCode(email); }
+export async function verifyCode(email, code) {
+  emit({ error: null });
+  try { await backend().verifyCode(email, code); await refreshUser(); if (!state.user) throw new Error("The code was accepted but no session was saved."); log("signed in with code"); toast("Signed in"); sync(); }
+  catch (e) { log("code failed: " + (e.message || e)); emit({ error: e.message || String(e) }); throw e; }
+}
+// fallback: the "Almost done" web page shows the sign-in code; pasting it here finishes the login without any link hand-off
+export async function finishWithCode(text) {
+  const t = (text || "").trim(), m = t.match(/[?&]code=([^&\s]+)/), code = m ? m[1] : t;
+  emit({ error: null });
+  try { await backend().finish(APP_SCHEME + "?code=" + encodeURIComponent(code)); await refreshUser(); if (!state.user) throw new Error("No session was saved."); toast("Signed in"); sync(); }
+  catch (e) { log("paste failed: " + (e.message || e)); emit({ error: e.message || String(e) }); throw e; }
+}
 export async function signOut() { await backend().signOut(); emit({ user: null, last: null }); }
 export async function deleteCloudData() {
   if (!state.user) return;

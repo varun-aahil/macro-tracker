@@ -25,7 +25,7 @@ jobs:
       - name: capacitor project
         run: |
           npm init -y
-          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/app @capacitor/browser
+          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/app @capacitor/browser @capgo/capacitor-social-login
           npx cap init "Macro Tracker" com.varunaahil.macrotracker --web-dir www
           npx cap add android
           npm i -D @capacitor/assets
@@ -41,7 +41,9 @@ jobs:
           PY
           grep -q 'permission.CAMERA' android/app/src/main/AndroidManifest.xml || sed -i 's#<application#<uses-permission android:name="android.permission.CAMERA" />\n    <application#' android/app/src/main/AndroidManifest.xml
       - name: build apk
-        run: cd android && ./gradlew assembleDebug
+        run: |
+          mkdir -p ~/.android && cp android-debug.keystore ~/.android/debug.keystore
+          cd android && ./gradlew assembleDebug
       - run: cp android/app/build/outputs/apk/debug/app-debug.apk macro-tracker.apk
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')

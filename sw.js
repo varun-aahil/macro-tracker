@@ -1,5 +1,5 @@
 // app shell works offline. the clip library and wasm are cached the first time they load.
-const SHELL = "macro-tracker-v10";
+const SHELL = "macro-tracker-v13";
 const FILES = ["./", "index.html", "manifest.json", "foods.json", "src/app.js", "src/embed.js",
   "src/learner.js", "src/logic.js", "src/store.js", "src/camera.js", "src/cloud.js", "src/sync.js", "src/config.js", "src/barcode.js", "src/ui.js", "src/plan.js", "src/onboarding.js", "src/me.js", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", e => e.waitUntil(
