@@ -69,7 +69,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
   const edit = !!existing;
   const flow = edit ? FLOW.filter(s => s !== "welcome") : FLOW;
   const d = fresh(existing);
-  let i = 0;
+  let i = 0, autoAdvanced = false;
 
   const goalText = () => d.goal === "lose" ? `lose about ${d.pace} kg a week` : d.goal === "gain" ? `gain about ${d.pace} kg a week` : "stay at your weight";
 
@@ -152,7 +152,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
       ${welcome ? "" : `<div class="obtop"><button class="icb" id="obback" aria-label="Back">${ICON.left}</button><div class="obprog"><i style="width:${Math.round((i) / (flow.length - 1) * 100)}%"></i></div></div>`}
       ${welcome ? `<div class="obbody">${body(step)}<div class="welcomeacts"><div class="acctnote" id="obacct" hidden></div><div class="warn" id="oberr"></div>
         <button class="bigbtn" id="obnext">Get started</button>
-        ${onSignIn ? '<button class="bigbtn outline" id="obsignin">Sign in with Google</button>' : ""}<button class="linkbtn" id="obrestore">Restore from a backup</button><input type="file" id="obfile" accept="application/json" style="display:none"></div></div>`
+        ${onSignIn ? '<button class="bigbtn outline" id="obsignin">Sign in or sign up</button>' : ""}<button class="linkbtn" id="obrestore">Restore from a backup</button><input type="file" id="obfile" accept="application/json" style="display:none"></div></div>`
       : `<div class="obbody">${body(step)}</div>
       <div class="obfoot"><div class="warn" id="oberr"></div>
         <button class="bigbtn" id="obnext">${last ? (edit ? "Save changes" : "Finish") : "Continue"}</button>
@@ -166,10 +166,18 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
         if (!document.body.contains(note)) return;
         note.hidden = !st.user && !st.error;
         if (btn) btn.hidden = !!st.user;
+        const first = st.user && (st.user.name || "").trim().split(/\s+/)[0];
+        if (st.user && st.last && !st.busy && !st.error && !autoAdvanced && !edit) {
+          // a new account: nothing saved yet, so carry on with setup, name filled in from Google
+          autoAdvanced = true;
+          note.textContent = `Welcome${first ? ", " + first : ""}. Let's set up your profile.`;
+          setTimeout(() => { if (document.body.contains(note)) { if (first && !d.name) d.name = first; i = flow.indexOf("name"); render(); } }, 700);
+          return;
+        }
         note.textContent = st.user
           ? (st.error ? `Signed in as ${st.user.email}, but syncing failed: ${st.error}`
             : st.busy || !st.last ? `Signed in as ${st.user.email}. Looking for your saved data…`
-            : `Signed in as ${st.user.email}. No saved data found yet. Set up your profile below and it will be saved to your account.`)
+            : `Signed in as ${st.user.email}. Setting things up…`)
           : (st.error || "");
       };
       paint(account.get()); unsubAcct = account.subscribe(paint);

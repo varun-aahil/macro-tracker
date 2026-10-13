@@ -25,7 +25,7 @@ async function client() {
 }
 
 const real = {
-  async user() { const { data } = await (await client()).auth.getSession(); const u = data.session && data.session.user; return u ? { id: u.id, email: u.email } : null; },
+  async user() { const { data } = await (await client()).auth.getSession(); const u = data.session && data.session.user; return u ? { id: u.id, email: u.email, name: (u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name)) || "" } : null; },
   async signIn() {
     const c = await client(), native = isNative();
     const { data, error } = await c.auth.signInWithOAuth({ provider: "google", options: { redirectTo: native ? APP_SCHEME : location.origin + location.pathname, skipBrowserRedirect: native } });
