@@ -1,38 +1,47 @@
 # Macro Tracker
 
-Photo macro tracker that runs entirely on your phone or PC. No server, no accounts, no API costs.
+A free photo macro tracker that runs on your phone or PC. Snap a meal, check the guess, see your calories and macros. The food recognition runs **on the device**: no LLM, no paid API, and your photos never leave it.
 
-Take a photo, get a draft list of foods, correct it, and (best) type in the real numbers when you know
-them. Every correction teaches the app your food and your portions.
+**Try it:** https://varun-aahil.github.io/macro-tracker/ · **Android and Windows builds:** see [Releases](../../releases)
+
+## Screenshots
+<p>
+  <img src="docs/Screenshot_20261014_122134_Macro Tracker.jpg" width="220" alt="Today screen with calories and macros">
+  <img src="docs/Screenshot_20261014_122139_Macro Tracker.jpg" width="220">
+  <img src="docs/Screenshot_20261014_122143_Macro Tracker.jpg" width="220">
+  <img src="docs/Screenshot_20261014_122147_Macro Tracker.jpg" width="220">
+  <img src="docs/Screenshot_20261014_122151_Macro Tracker.jpg" width="220">
+  <img src="docs/Screenshot_20261014_122155_Macro Tracker.jpg" width="220" alt="Me tab with targets and progress">
+</p>
+
+## Features
+- **Photo to macros.** CLIP (ViT-B/32, 8-bit quantized) runs in the browser with transformers.js and ranks your photo against a table of 190 foods, including many Indian dishes, fruits and drinks.
+- **Learns you.** Every confirmed meal stores its image embedding. Later photos are compared with your earlier ones, and portions default to what you usually eat.
+- **Asks when unsure.** If the top guess is not clearly ahead (score and margin thresholds), the app shows its top 3 and "None of these" instead of guessing.
+- **Barcode scanning** with Open Food Facts, plus one-tap "log again" for recent meals.
+- **Personal targets.** Mifflin-St Jeor calorie target, protein by body weight, fibre goal, and an optional weekly check-in that adjusts targets from your real intake and weight trend.
+- **Sign in with an email code** to sync meals, foods and settings across devices (Supabase, row-level security). Photos are never uploaded. The app also works fully without an account.
+- **Offline first.** IndexedDB storage, service worker, installable as a web app, Android APK (Capacitor) or Windows app (Electron).
 
 ## How it works
-- **Model:** CLIP (`Xenova/clip-vit-base-patch32`), a pretrained image + text encoder, run in the browser
-  with transformers.js. It is not an LLM. It scores your photo against each food name in your table, so it
-  works with no training data. Downloaded once (~150 MB) from Hugging Face, then cached on the device.
-- **Learning:** each saved photo meal stores its CLIP embedding. Next time, the photo is also compared to
-  your earlier photos of each food and that evidence is added to the zero-shot score.
-- **Portions:** the model does not measure grams. Starting portion = what you usually eat of that food
-  (median of your history), else the food's unit size.
-- **Real numbers:** if you type kcal, your portions rescale to match. Typed protein/carbs/fat replace the
-  estimate for that meal.
-- **Honest test:** every 5th photo meal is set aside and never learned from. The Me tab compares
-  "right food in top 3" at the start vs now on those meals.
-- **Storage:** IndexedDB on the device. Use Me > Save backup, browsers can clear site data.
+- **Model.** CLIP is a pretrained image and text encoder, not an LLM. It scores a photo against each food name, so it works with no training data.
+- **Learning.** Every confirmed meal stores its CLIP embedding. Later photos are also compared against your history, and that evidence is added to the zero-shot score.
+- **Portions.** Starting portion = median of your history for that food, else the food's unit size. If you type kcal, portions rescale to match.
+- **Honest test.** Every 5th photo meal is held out and never learned from. The Me tab tracks "right food in top 3" on those meals over time.
+- **Storage.** IndexedDB on the device. Supabase (Postgres + auth) for optional cross-device sync.
 
 ## Install
-- **Android (easiest):** repo Settings > Pages > Source: GitHub Actions. After the `pages` workflow runs, open
-  `https://varun-aahil.github.io/macro-tracker/` in Chrome > menu > Install app.
-- **Android APK / Windows .exe:** push a tag (`git tag v1.0.0 && git push --tags`). The `android` and
-  `windows` workflows attach `macro-tracker.apk` and `macro-tracker.exe` to the release. Allow "install unknown
-  apps" on the phone to sideload the APK.
+- **Web app:** open https://varun-aahil.github.io/macro-tracker/ in Chrome > menu > Install app.
+- **Android APK / Windows .exe:** see [Releases](../../releases).
 - **Run locally:** `python -m http.server 8000`, open http://localhost:8000
 - **Tests:** `node --test tests/learner.test.mjs`
 
 ## Limits
-- First photo needs internet to fetch the model, later use is offline.
-- CLIP zero-shot on home-cooked Indian food is weak at first. Expect to correct a lot for the first ~20 meals.
-  Naming foods the way CLIP would picture them (the "how the model should picture it" box) helps.
+- First load needs internet to download the model (~150 MB, cached after).
+- CLIP zero-shot on home-cooked Indian food is weak at first. Expect to correct the first ~20 meals.
 - Mixed plates give one embedding for the whole plate, so per-food learning is noisy.
-- Portion from a photo is not estimated, only learned from your history. Oil and ghee are invisible.
-- Seed nutrition values are approximate. Replace with your labels / IFCT.
-- The APK and .exe workflows, and the real CLIP download, have not been run yet.
+- Portion from a photo is not estimated, only learned from history. Oil and ghee are invisible.
+- Seed nutrition values are approximate. Check them against your labels.
+
+## Tech
+JavaScript (ES modules), transformers.js, CLIP, IndexedDB, Supabase (Postgres, auth), Capacitor, Electron, GitHub Actions.
