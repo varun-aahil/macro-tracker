@@ -69,7 +69,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
   const edit = !!existing;
   const flow = edit ? FLOW.filter(s => s !== "welcome") : FLOW;
   const d = fresh(existing);
-  let i = 0, autoAdvanced = false;
+  let i = 0, autoAdvanced = false, sg = { step: "email", email: "" };
 
   const goalText = () => d.goal === "lose" ? `lose about ${d.pace} kg a week` : d.goal === "gain" ? `gain about ${d.pace} kg a week` : "stay at your weight";
 
@@ -143,6 +143,62 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
     return "";
   }
 
+  // a screen of its own for signing in or signing up with an emailed code
+  function renderSignIn() {
+    if (unsubAcct) { unsubAcct(); unsubAcct = null; }
+    const em = sg.step === "email";
+    app.innerHTML = `<div class="ob"><div class="obtop"><button class="icb" id="sgback" aria-label="Back">${ICON.left}</button></div>
+      <div class="obbody">${em
+        ? `<h2 class="q">Sign in or sign up</h2><p class="muted">Enter your email and we'll send you a code. New here? That creates your account. Already have one? It signs you in.</p>
+           <input id="sgmail" class="sginput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="${esc(sg.email)}">`
+        : `<h2 class="q">Check your email</h2><p class="muted">We sent a code to <b>${esc(sg.email)}</b>. Type it below. It can take a minute, and it may be in spam.</p>
+           <input id="sgcode" class="sginput sgcode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Code">
+           <button class="linkbtn" id="sgagain">Send a new code</button>`}
+        <div class="warn" id="sgmsg"></div></div>
+      <div class="obfoot"><button class="bigbtn" id="sgnext">${em ? "Send code" : "Confirm"}</button></div></div>`;
+    const msg = $("#sgmsg"), next = $("#sgnext"), field = $(em ? "#sgmail" : "#sgcode");
+    const say = t => { msg.textContent = t || ""; };
+    field.focus({ preventScroll: true });
+    $("#sgback").onclick = () => { if (!em) { sg.step = "email"; renderSignIn(); } else { if (unsubAcct) { unsubAcct(); unsubAcct = null; } render(); } };
+    const send = async () => {
+      const e = $("#sgmail") ? $("#sgmail").value.trim() : sg.email;
+      if (!/^\S+@\S+\.\S+$/.test(e)) { say("Enter a valid email address."); return false; }
+      sg.email = e; next.disabled = true; say("Sending…");
+      try { await account.sendCode(e); return true; }
+      catch (err) { say("Couldn't send the code: " + (err.message || err)); return false; }
+      finally { next.disabled = false; }
+    };
+    if (em) {
+      const go = async () => { if (await send()) { sg.step = "code"; renderSignIn(); } };
+      next.onclick = go; field.onkeydown = ev => { if (ev.key === "Enter") go(); };
+    } else {
+      $("#sgagain").onclick = async () => { if (await send()) say("A new code is on its way."); };
+      const go = async () => {
+        const c = field.value.replace(/\s+/g, "");
+        if (c.length < 6) { say("Type the whole code from the email."); return; }
+        next.disabled = true; say("Checking…");
+        try { await account.verifyCode(sg.email, c); } catch (err) { say("That code didn't work. Check it and try again."); next.disabled = false; return; }
+        say("Signed in. Getting your account ready…");
+        const check = st => {
+          if (!document.body.contains(next)) return;
+          if (st.error) { say(st.error); next.disabled = false; return; }
+          if (st.user && st.last && !st.busy && !autoAdvanced) {
+            autoAdvanced = true;
+            // an existing account is taken to the app by the sync itself; a new one carries on with setup
+            setTimeout(() => {
+              if (!document.body.contains(next)) return;
+              const first = (st.user.name || "").trim().split(/\s+/)[0];
+              if (first && !d.name) d.name = first;
+              i = flow.indexOf("name"); render();
+            }, 700);
+          }
+        };
+        unsubAcct = account.subscribe(check); check(account.get());
+      };
+      next.onclick = go; field.onkeydown = ev => { if (ev.key === "Enter") go(); };
+    }
+  }
+
   function render() {
     const step = flow[i], last = i === flow.length - 1;
     if (step === "targets" && (!d.touched || !d.targets)) computeTargets();
@@ -150,9 +206,9 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
     const welcome = step === "welcome";
     app.innerHTML = `<div class="ob">
       ${welcome ? "" : `<div class="obtop"><button class="icb" id="obback" aria-label="Back">${ICON.left}</button><div class="obprog"><i style="width:${Math.round((i) / (flow.length - 1) * 100)}%"></i></div></div>`}
-      ${welcome ? `<div class="obbody">${body(step)}<div class="welcomeacts"><div class="acctnote" id="obacct" hidden></div><div class="warn" id="oberr"></div>
+      ${welcome ? `<div class="obbody">${body(step)}<div class="welcomeacts"><div class="warn" id="oberr"></div>
         <button class="bigbtn" id="obnext">Get started</button>
-        ${onSignIn && account && account.sendCode ? '<button class="bigbtn outline" id="obsignin">Sign in or sign up</button><div id="codebox" hidden><p class="muted">Enter your email and we\'ll send you a 6-digit code. New here? That creates your account. Already have one? It signs you in.</p><input id="codemail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"><button class="bigbtn outline" id="codesend">Send me a code</button><input id="codenum" inputmode="numeric" autocomplete="one-time-code" placeholder="Code from the email" hidden><button class="bigbtn" id="codego" hidden>Confirm code</button><div class="muted" id="codemsg"></div></div>' : ""}<button class="linkbtn" id="obrestore">Restore from a backup</button><input type="file" id="obfile" accept="application/json" style="display:none"></div></div>`
+        ${onSignIn && account && account.sendCode ? '<button class="bigbtn outline" id="obsignin">Sign in or sign up</button>' : ""}<button class="linkbtn" id="obrestore">Restore from a backup</button><input type="file" id="obfile" accept="application/json" style="display:none"></div></div>`
       : `<div class="obbody">${body(step)}</div>
       <div class="obfoot"><div class="warn" id="oberr"></div>
         <button class="bigbtn" id="obnext">${last ? (edit ? "Save changes" : "Finish") : "Continue"}</button>
@@ -160,29 +216,6 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
       </div>`}</div>`;
     wire(step);
     if (unsubAcct) { unsubAcct(); unsubAcct = null; }
-    if (welcome && account) {
-      const note = $("#obacct"), btn = $("#obsignin"), cbox = $("#codebox");
-      const paint = st => {
-        if (!document.body.contains(note)) return;
-        const trail = account.log ? account.log() : [];
-        note.hidden = !st.user && !st.error && !trail.length;
-        if (btn) btn.hidden = !!st.user; if (cbox && st.user) cbox.hidden = true;
-        const first = st.user && (st.user.name || "").trim().split(/\s+/)[0];
-        if (st.user && st.last && !st.busy && !st.error && !autoAdvanced && !edit) {
-          // a new account: nothing saved yet, so carry on with setup, name filled in from Google
-          autoAdvanced = true;
-          note.textContent = `Welcome${first ? ", " + first : ""}. Let's set up your profile.`;
-          setTimeout(() => { if (document.body.contains(note)) { if (first && !d.name) d.name = first; i = flow.indexOf("name"); render(); } }, 700);
-          return;
-        }
-        note.textContent = st.user
-          ? (st.error ? `Signed in as ${st.user.email}, but syncing failed: ${st.error}`
-            : st.busy || !st.last ? `Signed in as ${st.user.email}. Looking for your saved data…`
-            : `Signed in as ${st.user.email}. Setting things up…`)
-          : (st.error || "") + (trail.length ? (st.error ? "\n" : "") + "Sign-in log: " + trail.slice(-6).join(" › ") : "");
-      };
-      paint(account.get()); unsubAcct = account.subscribe(paint);
-    }
     const first = app.querySelector("input:not([type=file])"); if (first && (step === "name" || step === "body")) first.focus({ preventScroll: true });
   }
 
@@ -228,25 +261,7 @@ export function renderOnboarding(app, { existing = null, onFinish, onCancel, onR
 
     const back = $("#obback"); if (back) back.onclick = () => { if (i === 0) return onCancel && onCancel(); i--; render(); };
     const cancel = $("#obcancel"); if (cancel) cancel.onclick = () => onCancel && onCancel();
-    const cb = $("#obsignin");
-    if (cb && $("#codebox")) {
-      const box = $("#codebox"), msg = $("#codemsg"), mail = $("#codemail"), num = $("#codenum"), send = $("#codesend"), go = $("#codego");
-      cb.onclick = () => { box.hidden = !box.hidden; if (!box.hidden) mail.focus(); };
-      send.onclick = async () => {
-        const e = mail.value.trim(); if (!/^\S+@\S+\.\S+$/.test(e)) { msg.textContent = "Enter a valid email address."; return; }
-        send.disabled = true; msg.textContent = "Sending…";
-        try { await account.sendCode(e); msg.textContent = "Code sent. Check your inbox (and spam), then type it below."; num.hidden = false; go.hidden = false; num.focus(); }
-        catch (err) { msg.textContent = "Couldn't send the code: " + (err.message || err); }
-        send.disabled = false;
-      };
-      go.onclick = async () => {
-        const c = num.value.replace(/\s+/g, ""); if (c.length < 6) { msg.textContent = "Type the full code from the email."; return; }
-        go.disabled = true; msg.textContent = "Checking…";
-        try { await account.verifyCode(mail.value.trim(), c); msg.textContent = ""; }
-        catch (err) { msg.textContent = "That didn't work: " + (err.message || err); }
-        go.disabled = false;
-      };
-    }
+    const cb = $("#obsignin"); if (cb) cb.onclick = () => { sg = { step: "email", email: sg.email || "" }; renderSignIn(); };
     const rs = $("#obrestore"), file = $("#obfile");
     if (rs) { rs.onclick = () => file.click(); file.onchange = async e => { const f = e.target.files[0]; if (f) onRestore && onRestore(f); }; }
     $("#obnext").onclick = () => {
