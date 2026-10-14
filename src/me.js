@@ -190,11 +190,23 @@ export function renderMe(app, ctx) {
           ${st.error ? `<p class="warn">${esc(st.error)}</p>` : ""}
           <div class="row"><button class="ghost" id="ac-sync" style="flex:1">Sync now</button><button class="ghost" id="ac-out" style="flex:1">Sign out</button></div>
           <button class="danger" id="ac-del" style="margin-top:8px">Delete my cloud data</button>`
-        : `<p class="muted">Sign in with Google to keep your data safe online and use it on another phone. Photos are never uploaded.</p>
-          ${st.error ? `<p class="warn">${esc(st.error)}</p>` : ""}
-          <button id="ac-in" style="width:100%">Sign in with Google</button>`;
+        : `<p class="muted">Sign in or sign up with your email to keep your data safe online and use it on another phone. We email you a 6-digit code. Photos are never uploaded.</p>
+          <input id="ac-mail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+          <button id="ac-send" style="width:100%;margin-top:8px">Send me a code</button>
+          <input id="ac-num" inputmode="numeric" autocomplete="one-time-code" placeholder="Code from the email" hidden style="margin-top:8px">
+          <button id="ac-go" style="width:100%;margin-top:8px" hidden>Confirm code</button>
+          <p class="muted" id="ac-msg">${st.error ? esc(st.error) : ""}</p>`;
       const b = id => acct.querySelector(id);
-      if (b("#ac-in")) b("#ac-in").onclick = () => cloud.signIn();
+      if (b("#ac-send")) {
+        const msg = b("#ac-msg"), mail = b("#ac-mail"), num = b("#ac-num"), go = b("#ac-go");
+        b("#ac-send").onclick = async () => {
+          const e = mail.value.trim(); if (!/^\S+@\S+\.\S+$/.test(e)) { msg.textContent = "Enter a valid email address."; return; }
+          msg.textContent = "Sending…";
+          try { await cloud.sendCode(e); msg.textContent = "Code sent. Check your inbox (and spam)."; num.hidden = false; go.hidden = false; num.focus(); }
+          catch (err) { msg.textContent = "Couldn't send the code: " + (err.message || err); }
+        };
+        go.onclick = async () => { msg.textContent = "Checking…"; try { await cloud.verifyCode(mail.value.trim(), num.value.replace(/\s+/g, "")); } catch (err) { msg.textContent = "That didn't work: " + (err.message || err); } };
+      }
       if (b("#ac-sync")) b("#ac-sync").onclick = async () => { await cloud.sync(); };
       if (b("#ac-out")) b("#ac-out").onclick = async () => { await cloud.signOut(); };
       if (b("#ac-del")) b("#ac-del").onclick = async () => {

@@ -8,4 +8,4 @@ export const APP_SCHEME = "com.varunaahil.macrotracker://login";
 export const WEB_URL = "https://varun-aahil.github.io/macro-tracker/";
 
 // the "Web application" client ID from Google Cloud (ends in .apps.googleusercontent.com). Used for the in-app Google account picker on Android.
-export const GOOGLE_WEB_CLIENT_ID = "978166960077-k1gnag9bcfsak3uegg8au0i1eju2gal6.apps.googleusercontent.com";
+export const GOOGLE_WEB_CLIENT_ID = "";

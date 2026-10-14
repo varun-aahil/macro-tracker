@@ -25,7 +25,7 @@ jobs:
       - name: capacitor project
         run: |
           npm init -y
-          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/app @capacitor/browser @capgo/capacitor-social-login
+          npm i @capacitor/core @capacitor/cli @capacitor/android @capacitor/app @capacitor/browser
           npx cap init "Macro Tracker" com.varunaahil.macrotracker --web-dir www
           npx cap add android
           npm i -D @capacitor/assets
